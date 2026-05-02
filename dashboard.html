@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダッシュボード | きゅうり農業管理</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <h1 class="header__title">ダッシュボード</h1>
+  <a href="index.html" class="header__nav-btn">← 出荷入力</a>
+</header>
+
+<main class="main">
+
+  <!-- 期間切替 -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-period="week">週</button>
+    <button class="tab-btn"        data-period="month">月</button>
+    <button class="tab-btn"        data-period="year">年</button>
+    <button class="tab-btn"        data-period="day">日</button>
+  </div>
+
+  <!-- ハウス切替 -->
+  <div class="house-bar">
+    <button class="house-btn active" data-house-id="0">全体</button>
+    <button class="house-btn"        data-house-id="1">初号機</button>
+    <button class="house-btn"        data-house-id="2">弐号機</button>
+    <button class="house-btn"        data-house-id="3">参号機</button>
+  </div>
+
+  <!-- サマリーカード -->
+  <div class="summary-cards">
+    <div class="summary-card">
+      <div class="summary-card__label">合計箱数</div>
+      <div class="summary-card__value" id="summary-boxes">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card__label">合計売上</div>
+      <div class="summary-card__value" id="summary-uriage">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card__label" id="summary-avg-label">日平均</div>
+      <div class="summary-card__value" id="summary-avg">—</div>
+    </div>
+  </div>
+
+  <!-- 棒グラフ（JA・市場・JFP 積み上げ）+ 気温折れ線 -->
+  <div class="chart-card">
+    <h2 class="chart-title" id="shipment-chart-title">出荷箱数</h2>
+    <div class="chart-container">
+      <canvas id="shipment-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- 積算グラフ（月表示時のみ表示） -->
+  <div class="chart-card" id="cumulative-card" style="display:none;">
+    <h2 class="chart-title">月累計 vs 目標</h2>
+    <div class="chart-container">
+      <canvas id="cumulative-chart"></canvas>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/dashboard.js"></script>
+
+</body>
+</html>
