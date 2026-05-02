@@ -94,18 +94,23 @@ function getFormValues() {
    Supabase アクセス
 =========================== */
 async function loadRecord() {
-  const { data, error } = await db
-    .from('harvests')
-    .select('*')
-    .eq('house_id', currentHouseId)
-    .eq('date', currentDate)
-    .single();
-
-  // PGRST116 = 該当行なし（正常）
-  if (error && error.code !== 'PGRST116') {
-    console.error('loadRecord error:', error);
+  if (!db) { setFormValues(null); return; }
+  try {
+    const { data, error } = await db
+      .from('harvests')
+      .select('*')
+      .eq('house_id', currentHouseId)
+      .eq('date', currentDate)
+      .single();
+    // PGRST116 = 該当行なし（正常）
+    if (error && error.code !== 'PGRST116') {
+      console.error('loadRecord error:', error);
+    }
+    setFormValues(data || null);
+  } catch (err) {
+    console.error('loadRecord:', err);
+    setFormValues(null);
   }
-  setFormValues(data || null);
 }
 
 async function saveRecord() {
@@ -113,123 +118,128 @@ async function saveRecord() {
   saveBtn.disabled = true;
   saveBtn.textContent = '保存中...';
 
-  const payload = getFormValues();
+  try {
+    if (!db) throw new Error('Supabase未接続 — Vercel環境変数を確認してください');
 
-  const { error } = await db
-    .from('harvests')
-    .upsert(payload, { onConflict: 'house_id,date' });
+    const payload = getFormValues();
+    const { error } = await db
+      .from('harvests')
+      .upsert(payload, { onConflict: 'house_id,date' });
 
-  saveBtn.disabled = false;
-  saveBtn.textContent = '保存';
+    if (error) throw error;
 
-  if (error) {
+    showToast('保存しました');
+    await Promise.all([loadTodayTotals(), loadHistory()]);
+  } catch (err) {
     showToast('保存に失敗しました', true);
-    console.error('saveRecord error:', error);
-    return;
+    console.error('saveRecord:', err);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '保存';
   }
-
-  showToast('保存しました');
-  await Promise.all([loadTodayTotals(), loadHistory()]);
 }
 
 async function loadTodayTotals() {
-  const selectCols = ['house_id', ...COUNT_FIELDS, ...URIAGE_FIELDS].join(', ');
-  const { data, error } = await db
-    .from('harvests')
-    .select(selectCols)
-    .eq('date', currentDate);
-
   const totalSection = document.getElementById('today-total');
   const container    = document.getElementById('today-total-cards');
 
-  if (error) {
-    console.error('loadTodayTotals error:', error);
-    return;
+  if (!db) return;
+  try {
+    const selectCols = ['house_id', ...COUNT_FIELDS, ...URIAGE_FIELDS].join(', ');
+    const { data, error } = await db
+      .from('harvests')
+      .select(selectCols)
+      .eq('date', currentDate);
+
+    if (error) { console.error('loadTodayTotals error:', error); return; }
+    if (!data || data.length === 0) { totalSection.classList.add('hidden'); return; }
+
+    totalSection.classList.remove('hidden');
+
+    let allBoxes  = 0;
+    let allUriage = 0;
+
+    const houseCards = HOUSES.map(house => {
+      const rec    = data.find(r => r.house_id === house.id);
+      const boxes  = rec ? sumFields(rec, COUNT_FIELDS)  : 0;
+      const uriage = rec ? sumFields(rec, URIAGE_FIELDS) : 0;
+      allBoxes  += boxes;
+      allUriage += uriage;
+      return `
+        <div class="total-card">
+          <div class="total-card__house">${house.name}</div>
+          <div class="total-card__count">${boxes.toLocaleString()}<span class="total-card__unit"> 箱</span></div>
+          <div class="total-card__money">¥${uriage.toLocaleString()}</div>
+        </div>`;
+    });
+
+    houseCards.push(`
+      <div class="total-card" style="border-top: 3px solid var(--green-dark);">
+        <div class="total-card__house">全体合計</div>
+        <div class="total-card__count">${allBoxes.toLocaleString()}<span class="total-card__unit"> 箱</span></div>
+        <div class="total-card__money">¥${allUriage.toLocaleString()}</div>
+      </div>`);
+
+    container.innerHTML = houseCards.join('');
+  } catch (err) {
+    console.error('loadTodayTotals:', err);
   }
-  if (!data || data.length === 0) {
-    totalSection.classList.add('hidden');
-    return;
-  }
-
-  totalSection.classList.remove('hidden');
-
-  let allBoxes   = 0;
-  let allUriage  = 0;
-
-  const houseCards = HOUSES.map(house => {
-    const rec    = data.find(r => r.house_id === house.id);
-    const boxes  = rec ? sumFields(rec, COUNT_FIELDS)   : 0;
-    const uriage = rec ? sumFields(rec, URIAGE_FIELDS) : 0;
-    allBoxes  += boxes;
-    allUriage += uriage;
-    return `
-      <div class="total-card">
-        <div class="total-card__house">${house.name}</div>
-        <div class="total-card__count">${boxes.toLocaleString()}<span class="total-card__unit"> 箱</span></div>
-        <div class="total-card__money">¥${uriage.toLocaleString()}</div>
-      </div>`;
-  });
-
-  houseCards.push(`
-    <div class="total-card" style="border-top: 3px solid var(--green-dark);">
-      <div class="total-card__house">全体合計</div>
-      <div class="total-card__count">${allBoxes.toLocaleString()}<span class="total-card__unit"> 箱</span></div>
-      <div class="total-card__money">¥${allUriage.toLocaleString()}</div>
-    </div>`);
-
-  container.innerHTML = houseCards.join('');
 }
 
 async function loadHistory() {
-  const from = new Date();
-  from.setDate(from.getDate() - 6);
-  const fromStr = from.toLocaleDateString('sv-SE');
-
-  const selectCols = ['date', ...COUNT_FIELDS, ...URIAGE_FIELDS].join(', ');
-  const { data, error } = await db
-    .from('harvests')
-    .select(selectCols)
-    .eq('house_id', currentHouseId)
-    .gte('date', fromStr)
-    .order('date', { ascending: false });
-
   const container = document.getElementById('history-cards');
+  if (!db) { container.innerHTML = '<div class="loading">出荷データがありません</div>'; return; }
 
-  if (error || !data || data.length === 0) {
-    container.innerHTML = '<div class="loading">出荷データがありません</div>';
-    return;
-  }
+  try {
+    const from = new Date();
+    from.setDate(from.getDate() - 6);
+    const fromStr = from.toLocaleDateString('sv-SE');
 
-  container.innerHTML = data.map(rec => {
-    const boxes  = sumFields(rec, COUNT_FIELDS);
-    const uriage = sumFields(rec, URIAGE_FIELDS);
+    const selectCols = ['date', ...COUNT_FIELDS, ...URIAGE_FIELDS].join(', ');
+    const { data, error } = await db
+      .from('harvests')
+      .select(selectCols)
+      .eq('house_id', currentHouseId)
+      .gte('date', fromStr)
+      .order('date', { ascending: false });
 
-    // 主要品目を要約表示
-    const details = [];
-    if ((rec.ja_fukabako_am   || 0) > 0) details.push(`深箱AM:${rec.ja_fukabako_am}`);
-    const jaReg = (rec.ja_regular_al||0) + (rec.ja_regular_am||0) + (rec.ja_regular_as||0);
-    if (jaReg > 0) details.push(`JAレギュラー:${jaReg}`);
-    const mktReg = (rec.market_regular_as||0) + (rec.market_regular_am||0) + (rec.market_regular_al||0);
-    if (mktReg > 0) details.push(`市場レギュラー:${mktReg}`);
-    if ((rec.jfp_contena      || 0) > 0) details.push(`JFPコンテナ:${rec.jfp_contena}`);
+    if (error || !data || data.length === 0) {
+      container.innerHTML = '<div class="loading">出荷データがありません</div>';
+      return;
+    }
 
-    return `
-      <div class="history-card" data-date="${rec.date}">
-        <div class="history-card__date">${formatDateJa(rec.date)}</div>
-        <div class="history-card__detail">${details.join(' / ') || '—'}</div>
-        <div class="history-card__total">${boxes}箱<br><small style="color:var(--uriage-color)">¥${uriage.toLocaleString()}</small></div>
-      </div>`;
-  }).join('');
+    container.innerHTML = data.map(rec => {
+      const boxes  = sumFields(rec, COUNT_FIELDS);
+      const uriage = sumFields(rec, URIAGE_FIELDS);
 
-  // 履歴カードクリックで日付を選択してデータ読み込み
-  container.querySelectorAll('.history-card').forEach(card => {
-    card.addEventListener('click', () => {
-      currentDate = card.dataset.date;
-      document.getElementById('date-input').value = currentDate;
-      loadRecord();
-      loadTodayTotals();
+      const details = [];
+      if ((rec.ja_fukabako_am || 0) > 0) details.push(`深箱AM:${rec.ja_fukabako_am}`);
+      const jaReg = (rec.ja_regular_al||0) + (rec.ja_regular_am||0) + (rec.ja_regular_as||0);
+      if (jaReg > 0) details.push(`JAレギュラー:${jaReg}`);
+      const mktReg = (rec.market_regular_as||0) + (rec.market_regular_am||0) + (rec.market_regular_al||0);
+      if (mktReg > 0) details.push(`市場レギュラー:${mktReg}`);
+      if ((rec.jfp_contena || 0) > 0) details.push(`JFPコンテナ:${rec.jfp_contena}`);
+
+      return `
+        <div class="history-card" data-date="${rec.date}">
+          <div class="history-card__date">${formatDateJa(rec.date)}</div>
+          <div class="history-card__detail">${details.join(' / ') || '—'}</div>
+          <div class="history-card__total">${boxes}箱<br><small style="color:var(--uriage-color)">¥${uriage.toLocaleString()}</small></div>
+        </div>`;
+    }).join('');
+
+    container.querySelectorAll('.history-card').forEach(card => {
+      card.addEventListener('click', () => {
+        currentDate = card.dataset.date;
+        document.getElementById('date-input').value = currentDate;
+        loadRecord();
+        loadTodayTotals();
+      });
     });
-  });
+  } catch (err) {
+    console.error('loadHistory:', err);
+    container.innerHTML = '<div class="loading">出荷データがありません</div>';
+  }
 }
 
 /* ===========================
