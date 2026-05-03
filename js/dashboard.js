@@ -47,6 +47,8 @@ let currentPeriod  = 'week';
 let currentHouseId = 0;
 let shipmentChart  = null;
 let cumulChart     = null;
+let selectedYear   = new Date().getFullYear();
+let selectedMonth  = new Date().getMonth(); // 0-indexed
 
 /* ===========================
    ユーティリティ
@@ -72,8 +74,9 @@ function getDateRange(period) {
       return { from: toDateStr(from), to: toDateStr(today) };
     }
     case 'month': {
-      const from = new Date(today.getFullYear(), today.getMonth(), 1);
-      return { from: toDateStr(from), to: toDateStr(today) };
+      const from        = new Date(selectedYear, selectedMonth, 1);
+      const lastOfMonth = new Date(selectedYear, selectedMonth + 1, 0);
+      return { from: toDateStr(from), to: toDateStr(lastOfMonth < today ? lastOfMonth : today) };
     }
     case 'year': {
       const from = new Date(today.getFullYear(), today.getMonth() - 11, 1);
@@ -294,14 +297,16 @@ function renderCumulativeChart(byDate) {
   }
   card.style.display = '';
 
-  const today        = new Date();
-  const daysInMonth  = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const target       = MONTHLY_TARGET_PER_HOUSE[currentHouseId] ?? 900;
+  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+  const target      = MONTHLY_TARGET_PER_HOUSE[currentHouseId] ?? 900;
 
-  const labels      = byDate.map(r => formatDateLabel(r.date, 'month'));
-  let cumul         = 0;
-  const cumulData   = byDate.map(r => { cumul += r.ja + r.market + r.jfp; return cumul; });
-  const targetData  = byDate.map((_, i) => Math.round(target * (i + 1) / daysInMonth));
+  const labels     = byDate.map(r => formatDateLabel(r.date, 'month'));
+  let cumul        = 0;
+  const cumulData  = byDate.map(r => { cumul += r.ja + r.market + r.jfp; return cumul; });
+  const targetData = byDate.map(r => {
+    const day = new Date(r.date + 'T00:00:00').getDate();
+    return Math.round(target * day / daysInMonth);
+  });
 
   const ctx = document.getElementById('cumulative-chart').getContext('2d');
   cumulChart = new Chart(ctx, {
@@ -364,8 +369,11 @@ async function refresh() {
   weatherRaw.forEach(w => { weatherByDate[w.date] = w; });
 
   // チャートタイトル更新
-  const titles = { day: '本日の出荷箱数（ハウス別）', week: '週間出荷箱数', month: '月間出荷箱数', year: '年間出荷箱数（月次）' };
-  document.getElementById('shipment-chart-title').textContent = titles[currentPeriod];
+  const titles = { day: '本日の出荷箱数（ハウス別）', week: '週間出荷箱数', year: '年間出荷箱数（月次）' };
+  const chartTitle = currentPeriod === 'month'
+    ? `${selectedYear}年${selectedMonth + 1}月の出荷箱数`
+    : titles[currentPeriod];
+  document.getElementById('shipment-chart-title').textContent = chartTitle;
 
   if (currentPeriod === 'day') {
     const byHouse = aggregateByHouse(records);
@@ -408,6 +416,7 @@ function initPeriodTabs() {
       document.querySelectorAll('.tab-btn[data-period]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentPeriod = btn.dataset.period;
+      document.getElementById('month-nav').style.display = currentPeriod === 'month' ? '' : 'none';
       refresh();
     });
   });
@@ -424,8 +433,34 @@ function initHouseButtons() {
   });
 }
 
+function updateMonthLabel() {
+  document.getElementById('month-label').textContent = `${selectedYear}年${selectedMonth + 1}月`;
+  const now = new Date();
+  const isCurrentMonth = selectedYear === now.getFullYear() && selectedMonth === now.getMonth();
+  document.getElementById('month-next').disabled = isCurrentMonth;
+}
+
+function initMonthNav() {
+  updateMonthLabel();
+
+  document.getElementById('month-prev').addEventListener('click', () => {
+    selectedMonth--;
+    if (selectedMonth < 0) { selectedMonth = 11; selectedYear--; }
+    updateMonthLabel();
+    refresh();
+  });
+
+  document.getElementById('month-next').addEventListener('click', () => {
+    selectedMonth++;
+    if (selectedMonth > 11) { selectedMonth = 0; selectedYear++; }
+    updateMonthLabel();
+    refresh();
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initPeriodTabs();
   initHouseButtons();
+  initMonthNav();
   refresh();
 });

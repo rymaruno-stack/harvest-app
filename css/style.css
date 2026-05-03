@@ -473,6 +473,52 @@ body {
 }
 
 /* ===========================
+   Dashboard — 月ナビ
+=========================== */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--white);
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+.month-nav__btn {
+  min-width: 44px;
+  min-height: 44px;
+  background: var(--gray-100);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--gray-700);
+  transition: all 0.2s;
+}
+
+.month-nav__btn:hover:not(:disabled) {
+  background: var(--green-pale);
+  border-color: var(--green-light);
+}
+
+.month-nav__btn:disabled {
+  color: var(--gray-400);
+  cursor: not-allowed;
+}
+
+.month-nav__label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--green-dark);
+  min-width: 110px;
+  text-align: center;
+}
+
+/* ===========================
    Dashboard — サマリーカード
 =========================== */
 .summary-cards {
