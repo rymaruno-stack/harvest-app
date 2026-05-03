@@ -97,6 +97,29 @@ function formatMonthLabel(monthStr) {
   return `${Number(monthStr.slice(5, 7))}月`;
 }
 
+// 気象庁 weather_code → 天気アイコン絵文字
+function weatherCodeToIcon(code) {
+  if (!code) return '';
+  const n = Number(code);
+  if (isNaN(n)) return '';
+
+  if (n >= 400) return '🌨';                                          // 雪
+  if (n >= 300) return (n === 308 || n === 350) ? '⛈' : '🌧';       // 雨（雷雨含む）
+  if (n >= 200) {
+    if (n === 208 || n === 240 || n === 250) return '⛈';             // 曇り+雷雨
+    if (n === 209 || n === 231)              return '🌫';             // 霧
+    if (n === 200)                           return '☁';             // 曇り
+    if (n === 201 || n === 210 || n === 211 || n === 223) return '⛅'; // 曇り時々晴れ
+    return '🌧';                                                      // 曇り+雨
+  }
+  // 1xx: 晴れ系
+  if (n === 100)                   return '☀';
+  if (n === 108 || n === 140)      return '⛈';                       // 晴れ+雷雨
+  if (n === 130 || n === 131)      return '🌫';                       // 霧のち晴れ
+  if (n === 101 || n === 110 || n === 111) return '⛅';               // 晴れ時々/のち曇り
+  return '🌦';                                                        // 晴れ+雨
+}
+
 /* ===========================
    データ集計
 =========================== */
@@ -162,7 +185,7 @@ async function fetchHarvests(from, to) {
 async function fetchWeather(from, to) {
   const { data, error } = await db
     .from('weather_logs')
-    .select('date, temp_max, temp_min')
+    .select('date, temp_max, temp_min, weather_code')
     .gte('date', from)
     .lte('date', to)
     .order('date', { ascending: true });
@@ -267,7 +290,18 @@ function renderShipmentChart(labels, jaData, marketData, jfpData, weatherByDate)
       scales: {
         x: {
           stacked: true,
-          ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 20 },
+          ticks: {
+            maxRotation: 45,
+            autoSkip: true,
+            maxTicksLimit: 20,
+            callback: (value, index) => {
+              const label = labels[index];
+              const icon = weatherByDate?.[label]?.weather_code
+                ? weatherCodeToIcon(weatherByDate[label].weather_code)
+                : '';
+              return icon ? [icon, label] : label;
+            },
+          },
         },
         y: {
           stacked: true,
