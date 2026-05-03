@@ -1,6 +1,6 @@
 'use strict';
 
-// 宮崎地方気象台の予報 (エリアコード 450010)
+// 宮崎県の予報 (都道府県コード 450000)
 const JMA_FORECAST_URL = 'https://www.jma.go.jp/bosai/forecast/data/forecast/450000.json';
 
 /* ===========================
@@ -50,6 +50,8 @@ function parseJMAData(jmaData, targetDate) {
   }
 
   // ── 最高・最低気温（週間予報 data[1] timeSeries[1] を優先）──
+  // 17時以降のフェッチでは当日が週間予報に含まれないため、
+  // 当日マッチがない場合は先頭の有効データ（翌日予報）を使用する
   const weekly = jmaData[1];
   if (weekly) {
     const tempTs = weekly.timeSeries?.[1];
@@ -62,6 +64,16 @@ function parseJMAData(jmaData, targetDate) {
         if (maxV !== '' && maxV != null) tempMax = Number(maxV);
         if (minV !== '' && minV != null) tempMin = Number(minV);
       });
+      // 当日分が週間予報にない場合、先頭から最初の有効値を使用
+      if (tempMax === null && tempMin === null) {
+        for (let i = 0; i < (tempTs.timeDefines?.length ?? 0); i++) {
+          const maxV = area?.tempsMax?.[i];
+          const minV = area?.tempsMin?.[i];
+          if (tempMax === null && maxV !== '' && maxV != null) tempMax = Number(maxV);
+          if (tempMin === null && minV !== '' && minV != null) tempMin = Number(minV);
+          if (tempMax !== null && tempMin !== null) break;
+        }
+      }
     }
   }
 
@@ -70,15 +82,22 @@ function parseJMAData(jmaData, targetDate) {
     const tempTs = shortTerm.timeSeries?.[2];
     if (tempTs) {
       const area = tempTs.areas?.[0];
-      const todayTemps = [];
+      const temps = [];
       tempTs.timeDefines?.forEach((dt, i) => {
         if (!dt.startsWith(targetDate)) return;
         const v = area?.temps?.[i];
-        if (v !== '' && v != null) todayTemps.push(Number(v));
+        if (v !== '' && v != null) temps.push(Number(v));
       });
-      if (todayTemps.length > 0) {
-        if (tempMax === null) tempMax = Math.max(...todayTemps);
-        if (tempMin === null) tempMin = Math.min(...todayTemps);
+      // 当日データがない場合は全エントリを使用（翌日以降の予報値）
+      if (temps.length === 0) {
+        tempTs.timeDefines?.forEach((dt, i) => {
+          const v = area?.temps?.[i];
+          if (v !== '' && v != null) temps.push(Number(v));
+        });
+      }
+      if (temps.length > 0) {
+        if (tempMax === null) tempMax = Math.max(...temps);
+        if (tempMin === null) tempMin = Math.min(...temps);
       }
     }
   }
