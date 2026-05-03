@@ -5,7 +5,7 @@
 // セットアップ手順は README.md を参照
 // ============================================================
 
-const SPREADSHEET_ID = '1VUvQEaa_x1Rk_KnhmSV_kbGD5Ux15d8IRby7zent69A';
+const SPREADSHEET_ID = '1iRXThJwiKP6Tv16N076iLl9cLYq8ZYBowymtxCnitvg';
 
 // house_id → セクション開始行
 const SECTIONS = {
@@ -71,10 +71,11 @@ const COLUMN_MAP = [
 // ── Webhook エンドポイント ────────────────────────────────────
 function doPost(e) {
   try {
-    // オプション: Webhook シークレット検証
-    // Supabase Webhook URL に ?secret=XXXX を付けて設定した場合に有効
+    console.log('doPost受信 parameter:', JSON.stringify(e.parameter));
+
     const secret = PropertiesService.getScriptProperties().getProperty('WEBHOOK_SECRET');
     if (secret && e.parameter.secret !== secret) {
+      console.error('unauthorized: 受信secret=[' + e.parameter.secret + '] 期待値=[' + secret + ']');
       return jsonResponse({ error: 'unauthorized' });
     }
 
@@ -118,10 +119,12 @@ function fetchDailyTotals(dateStr, houseId) {
     throw new Error(`Supabase fetch failed: ${resp.getResponseCode()} ${resp.getContentText()}`);
   }
 
-  const records = JSON.parse(resp.getContentText());
+  const rows = JSON.parse(resp.getContentText());
+  console.log('取得件数:', rows.length);
+  console.log('rawRecord:', JSON.stringify(rows[0]));
 
   const totals = {};
-  for (const rec of records) {
+  for (const rec of rows) {
     for (const [, field] of COLUMN_MAP) {
       totals[field] = (totals[field] || 0) + (rec[field] || 0);
     }
@@ -161,8 +164,96 @@ function jsonResponse(data) {
 }
 
 
+// ── 月次シート自動生成 ────────────────────────────────────────
+// 月曜=0 … 日曜=6（JavaScript の (getDay()+6)%7 に対応）
+const DOW_JA = ['月', '火', '水', '木', '金', '土', '日'];
+
+// 全セクション開始行: 全体(6), 初号機(46), 弐号機(86), 参号機(126)
+const SECTION_START_ROWS = [6, 46, 86, 126];
+
+const DATA_COL_START = 3;   // C列
+const DATA_COL_END   = 51;  // AY列
+const DATA_COL_COUNT = DATA_COL_END - DATA_COL_START + 1; // 49列
+
+/**
+ * 前月シートを複製して当月シートを作成する。
+ * 毎月1日に時間トリガーで自動実行される。
+ */
+function createNextMonthSheet() {
+  const now   = new Date();
+  const year  = now.getFullYear();
+  const month = now.getMonth() + 1; // 1-indexed
+
+  const newSheetName  = `${month}月`;
+  const prevMonth     = month === 1 ? 12 : month - 1;
+  const prevSheetName = `${prevMonth}月`;
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+  if (ss.getSheetByName(newSheetName)) {
+    console.log(`シート "${newSheetName}" は既に存在します。スキップします。`);
+    return;
+  }
+
+  const srcSheet = ss.getSheetByName(prevSheetName);
+  if (!srcSheet) throw new Error(`前月シート "${prevSheetName}" が見つかりません`);
+
+  // 前月シートを複製してリネーム（末尾に追加される）
+  const newSheet = srcSheet.copyTo(ss);
+  newSheet.setName(newSheetName);
+
+  // 月の末日を取得（day=0 で前月末日 → month 月の末日）
+  const lastDay = new Date(year, month, 0).getDate();
+
+  for (const startRow of SECTION_START_ROWS) {
+    // A列（日）・B列（曜日）を当月の日付で上書き（31行分）
+    const abValues = [];
+    for (let day = 1; day <= 31; day++) {
+      if (day <= lastDay) {
+        const d = new Date(year, month - 1, day);
+        abValues.push([day, DOW_JA[(d.getDay() + 6) % 7]]);
+      } else {
+        abValues.push([null, null]); // 月末以降の行をクリア
+      }
+    }
+    newSheet.getRange(startRow, 1, 31, 2).setValues(abValues);
+
+    // C〜AY列: 数式は保持し数値データをクリア
+    const dataRange = newSheet.getRange(startRow, DATA_COL_START, 31, DATA_COL_COUNT);
+    const formulas  = dataRange.getFormulas(); // 数式のあるセルは "=..." 文字列
+    dataRange.clearContent();
+    dataRange.setFormulas(formulas); // 数式のみ復元
+  }
+
+  SpreadsheetApp.flush();
+  console.log(`シート "${newSheetName}" を作成しました（${year}年${month}月, ${lastDay}日）`);
+}
+
+/**
+ * 毎月1日 午前1時に createNextMonthSheet を実行するトリガーを登録する。
+ * 初回のみ GAS エディタから手動実行すること。
+ */
+function setupMonthlyTrigger() {
+  // 既存の同名トリガーを削除（重複防止）
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'createNextMonthSheet') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger('createNextMonthSheet')
+    .timeBased()
+    .onMonthDay(1)
+    .atHour(1)
+    .create();
+  console.log('毎月1日 1時に createNextMonthSheet を実行するトリガーを登録しました');
+}
+
+
 // ── 動作確認用（GASエディタから手動実行） ──────────────────────
+
+// Webhook経由でSupabaseの実データを書き込む（結合テスト）
 function testWebhook() {
+  const secret = PropertiesService.getScriptProperties().getProperty('WEBHOOK_SECRET');
   const mockEvent = {
     postData: {
       contents: JSON.stringify({
@@ -174,8 +265,15 @@ function testWebhook() {
         },
       }),
     },
-    parameter: {},
+    parameter: secret ? { secret } : {},
   };
   const result = doPost(mockEvent);
   console.log(result.getContent());
+}
+
+// 列マッピング単体テスト: Supabaseを使わず固定値でH列を確認する
+function testColumnMapping() {
+  const totals = { ja_regular_al: 10 };
+  writeToSheet('2026-04-28', 1, totals);
+  console.log('完了: 初号機 4/28行 のH列に 10 が書き込まれたはず');
 }

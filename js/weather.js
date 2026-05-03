@@ -15,11 +15,13 @@ function getTodayJST() {
    Supabase チェック
 =========================== */
 async function todayWeatherExists(dateStr) {
-  const { data } = await db
+  // maybeSingle: 0件でもエラーにならない（single は0件時に PGRST116 エラーを返す）
+  const { data, error } = await db
     .from('weather_logs')
     .select('date')
     .eq('date', dateStr)
-    .single();
+    .maybeSingle();
+  if (error) throw error;
   return !!data;
 }
 
@@ -88,15 +90,19 @@ function parseJMAData(jmaData, targetDate) {
    メイン処理
 =========================== */
 async function fetchAndSaveWeather() {
+  if (!db) {
+    console.warn('Supabase が未初期化のため weather.js をスキップします');
+    return;
+  }
+
   const today = getTodayJST();
 
-  // 当日データが既にあればスキップ
+  // 当日データが既にあればスキップ（確認失敗でも取得・保存を続行する）
   try {
     const exists = await todayWeatherExists(today);
     if (exists) return;
   } catch (e) {
-    console.warn('weather_logs 確認失敗:', e.message);
-    return;
+    console.warn('weather_logs 確認失敗（取得を続行します）:', e.message);
   }
 
   // 気象庁API 取得
@@ -115,16 +121,20 @@ async function fetchAndSaveWeather() {
   // Supabase に保存（UPSERT）
   const { error } = await db
     .from('weather_logs')
-    .upsert({
-      date: today,
-      temp_max: tempMax,
-      temp_min: tempMin,
-      weather_code: weatherCode,
-      weather_desc: weatherDesc,
-    });
+    .upsert(
+      {
+        date:         today,
+        temp_max:     tempMax,
+        temp_min:     tempMin,
+        weather_code: weatherCode,
+        weather_desc: weatherDesc,
+        fetched_at:   new Date().toISOString(),
+      },
+      { onConflict: 'date' }
+    );
 
   if (error) {
-    console.error('weather_logs 保存失敗:', error);
+    console.error('weather_logs 保存失敗:', JSON.stringify(error));
   } else {
     console.info(`気象データ保存完了: ${today} 最高${tempMax ?? '?'}℃ 最低${tempMin ?? '?'}℃ ${weatherDesc ?? ''}`);
   }
