@@ -1,7 +1,7 @@
 'use strict';
 
 // 宮崎地方気象台の予報 (エリアコード 450010)
-const JMA_FORECAST_URL = 'https://www.jma.go.jp/bosai/forecast/data/forecast/450010.json';
+const JMA_FORECAST_URL = 'https://www.jma.go.jp/bosai/forecast/data/forecast/450000.json';
 
 /* ===========================
    ユーティリティ
