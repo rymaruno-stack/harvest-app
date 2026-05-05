@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>売上入力 | きゅうり農業管理</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <h1 class="header__title">売上入力</h1>
+  <div style="display:flex;gap:8px">
+    <a href="index.html"     class="header__nav-btn">← 出荷入力</a>
+    <a href="dashboard.html" class="header__nav-btn">ダッシュボード →</a>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- ハウス選択タブ -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-house-id="1">初号機</button>
+    <button class="tab-btn"        data-house-id="2">弐号機</button>
+    <button class="tab-btn"        data-house-id="3">参号機</button>
+  </div>
+
+  <!-- 日付選択 -->
+  <div class="date-section">
+    <label class="date-label" for="date-input">日付</label>
+    <input type="date" id="date-input" class="date-input">
+  </div>
+
+  <!-- 入力フォーム -->
+  <form id="sales-form">
+
+    <!-- JA 売上 -->
+    <section class="form-section">
+      <h2 class="section-title section-title--uriage">JA 売上</h2>
+      <div class="input-grid">
+        <div class="input-item">
+          <label class="input-label" for="ja_uriage_regular">レギュラー</label>
+          <input type="number" id="ja_uriage_regular" name="ja_uriage_regular" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="ja_uriage_kobukuro">小袋</label>
+          <input type="number" id="ja_uriage_kobukuro" name="ja_uriage_kobukuro" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="ja_uriage_kikakugai">規格外</label>
+          <input type="number" id="ja_uriage_kikakugai" name="ja_uriage_kikakugai" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="ja_uriage_fukabako">深箱</label>
+          <input type="number" id="ja_uriage_fukabako" name="ja_uriage_fukabako" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="ja_uriage_hirabako">平箱</label>
+          <input type="number" id="ja_uriage_hirabako" name="ja_uriage_hirabako" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="ja_uriage_10k">10k</label>
+          <input type="number" id="ja_uriage_10k" name="ja_uriage_10k" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="ja_uriage_nagabako">長箱</label>
+          <input type="number" id="ja_uriage_nagabako" name="ja_uriage_nagabako" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+      </div>
+    </section>
+
+    <!-- 市場 売上 -->
+    <section class="form-section">
+      <h2 class="section-title section-title--market">市場 売上</h2>
+      <div class="input-grid">
+        <div class="input-item">
+          <label class="input-label" for="market_uriage_as">AS</label>
+          <input type="number" id="market_uriage_as" name="market_uriage_as" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="market_uriage_am">AM</label>
+          <input type="number" id="market_uriage_am" name="market_uriage_am" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="market_uriage_al">AL</label>
+          <input type="number" id="market_uriage_al" name="market_uriage_al" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="market_uriage_bm">BM</label>
+          <input type="number" id="market_uriage_bm" name="market_uriage_bm" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="market_uriage_bl">BL</label>
+          <input type="number" id="market_uriage_bl" name="market_uriage_bl" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="market_uriage_bs">BS</label>
+          <input type="number" id="market_uriage_bs" name="market_uriage_bs" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="market_uriage_fukabako_a">深箱A</label>
+          <input type="number" id="market_uriage_fukabako_a" name="market_uriage_fukabako_a" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="market_uriage_pori">ポリ</label>
+          <input type="number" id="market_uriage_pori" name="market_uriage_pori" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+      </div>
+    </section>
+
+    <!-- JFP 売上 -->
+    <section class="form-section">
+      <h2 class="section-title section-title--jfp">JFP 売上</h2>
+      <div class="input-grid">
+        <div class="input-item">
+          <label class="input-label" for="jfp_uriage_contena">コンテナ</label>
+          <input type="number" id="jfp_uriage_contena" name="jfp_uriage_contena" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="jfp_uriage_fukabako">深箱</label>
+          <input type="number" id="jfp_uriage_fukabako" name="jfp_uriage_fukabako" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="jfp_uriage_b">B</label>
+          <input type="number" id="jfp_uriage_b" name="jfp_uriage_b" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+        <div class="input-item">
+          <label class="input-label" for="jfp_uriage_cd">CD</label>
+          <input type="number" id="jfp_uriage_cd" name="jfp_uriage_cd" class="num-input num-input--money" min="0" step="1" value="0">
+        </div>
+      </div>
+    </section>
+
+    <!-- 入力中合計 -->
+    <section class="form-section">
+      <h2 class="section-title section-title--uriage">合計</h2>
+      <div class="today-total__cards" style="margin-top:8px">
+        <div class="total-card">
+          <div class="total-card__house">JA</div>
+          <div class="total-card__money" id="total-ja" style="font-size:1.2rem;font-weight:700">¥0</div>
+        </div>
+        <div class="total-card">
+          <div class="total-card__house">市場</div>
+          <div class="total-card__money" id="total-market" style="font-size:1.2rem;font-weight:700">¥0</div>
+        </div>
+        <div class="total-card">
+          <div class="total-card__house">JFP</div>
+          <div class="total-card__money" id="total-jfp" style="font-size:1.2rem;font-weight:700">¥0</div>
+        </div>
+        <div class="total-card" style="border-top:3px solid var(--uriage-color)">
+          <div class="total-card__house">合計</div>
+          <div class="total-card__money" id="total-grand" style="font-size:1.4rem;font-weight:700">¥0</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 保存ボタン -->
+    <div class="save-area">
+      <button type="submit" id="save-btn" class="save-btn">保存</button>
+    </div>
+
+  </form>
+
+  <!-- 過去7日間の履歴 -->
+  <div class="history-section">
+    <h2 class="history-title">過去7日間の売上履歴</h2>
+    <div id="history-cards" class="history-cards">
+      <div class="loading">読み込み中...</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast通知 -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/sales.js"></script>
+
+</body>
+</html>
