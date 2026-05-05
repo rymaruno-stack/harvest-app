@@ -20,15 +20,6 @@ const COUNT_FIELDS = [
   'jfp_contena', 'jfp_fukabako_5kg', 'jfp_b_5kg', 'jfp_cd_10kg',
 ];
 
-const URIAGE_FIELDS = [
-  'ja_uriage_nagabako', 'ja_uriage_fukabako', 'ja_uriage_hirabako', 'ja_uriage_10k',
-  'ja_uriage_regular', 'ja_uriage_kobukuro', 'ja_uriage_kikakugai',
-  'market_uriage_fukabako_a', 'market_uriage_as', 'market_uriage_am', 'market_uriage_al',
-  'market_uriage_bs', 'market_uriage_bm', 'market_uriage_bl', 'market_uriage_pori',
-  'jfp_uriage_contena', 'jfp_uriage_fukabako', 'jfp_uriage_b', 'jfp_uriage_cd',
-];
-
-const ALL_FIELDS = [...COUNT_FIELDS, ...URIAGE_FIELDS];
 
 /* ===========================
    状態
@@ -67,7 +58,7 @@ function showToast(msg, isError = false) {
    フォーム操作
 =========================== */
 function setFormValues(record) {
-  ALL_FIELDS.forEach(f => {
+  COUNT_FIELDS.forEach(f => {
     const el = document.getElementById(f);
     if (el) el.value = record ? (record[f] ?? 0) : 0;
   });
@@ -80,10 +71,6 @@ function getFormValues() {
   COUNT_FIELDS.forEach(f => {
     const el = document.getElementById(f);
     data[f] = el ? (parseInt(el.value, 10) || 0) : 0;
-  });
-  URIAGE_FIELDS.forEach(f => {
-    const el = document.getElementById(f);
-    data[f] = el ? (parseFloat(el.value) || 0) : 0;
   });
   const noteEl = document.getElementById('note');
   data.note = noteEl ? noteEl.value.trim() : '';
@@ -145,7 +132,7 @@ async function loadTodayTotals() {
 
   if (!db) return;
   try {
-    const selectCols = ['house_id', ...COUNT_FIELDS, ...URIAGE_FIELDS].join(', ');
+    const selectCols = ['house_id', ...COUNT_FIELDS].join(', ');
     const { data, error } = await db
       .from('harvests')
       .select(selectCols)
@@ -156,20 +143,16 @@ async function loadTodayTotals() {
 
     totalSection.classList.remove('hidden');
 
-    let allBoxes  = 0;
-    let allUriage = 0;
+    let allBoxes = 0;
 
     const houseCards = HOUSES.map(house => {
-      const rec    = data.find(r => r.house_id === house.id);
-      const boxes  = rec ? sumFields(rec, COUNT_FIELDS)  : 0;
-      const uriage = rec ? sumFields(rec, URIAGE_FIELDS) : 0;
-      allBoxes  += boxes;
-      allUriage += uriage;
+      const rec   = data.find(r => r.house_id === house.id);
+      const boxes = rec ? sumFields(rec, COUNT_FIELDS) : 0;
+      allBoxes += boxes;
       return `
         <div class="total-card">
           <div class="total-card__house">${house.name}</div>
           <div class="total-card__count">${boxes.toLocaleString()}<span class="total-card__unit"> 箱</span></div>
-          <div class="total-card__money">¥${uriage.toLocaleString()}</div>
         </div>`;
     });
 
@@ -177,7 +160,6 @@ async function loadTodayTotals() {
       <div class="total-card" style="border-top: 3px solid var(--green-dark);">
         <div class="total-card__house">全体合計</div>
         <div class="total-card__count">${allBoxes.toLocaleString()}<span class="total-card__unit"> 箱</span></div>
-        <div class="total-card__money">¥${allUriage.toLocaleString()}</div>
       </div>`);
 
     container.innerHTML = houseCards.join('');
@@ -195,7 +177,7 @@ async function loadHistory() {
     from.setDate(from.getDate() - 6);
     const fromStr = from.toLocaleDateString('sv-SE');
 
-    const selectCols = ['date', ...COUNT_FIELDS, ...URIAGE_FIELDS].join(', ');
+    const selectCols = ['date', ...COUNT_FIELDS].join(', ');
     const { data, error } = await db
       .from('harvests')
       .select(selectCols)
@@ -209,8 +191,7 @@ async function loadHistory() {
     }
 
     container.innerHTML = data.map(rec => {
-      const boxes  = sumFields(rec, COUNT_FIELDS);
-      const uriage = sumFields(rec, URIAGE_FIELDS);
+      const boxes = sumFields(rec, COUNT_FIELDS);
 
       const details = [];
       if ((rec.ja_fukabako_am || 0) > 0) details.push(`深箱AM:${rec.ja_fukabako_am}`);
@@ -224,7 +205,7 @@ async function loadHistory() {
         <div class="history-card" data-date="${rec.date}">
           <div class="history-card__date">${formatDateJa(rec.date)}</div>
           <div class="history-card__detail">${details.join(' / ') || '—'}</div>
-          <div class="history-card__total">${boxes}箱<br><small style="color:var(--uriage-color)">¥${uriage.toLocaleString()}</small></div>
+          <div class="history-card__total">${boxes}箱</div>
         </div>`;
     }).join('');
 
