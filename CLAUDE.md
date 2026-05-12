@@ -106,6 +106,10 @@ CREATE TABLE harvests (
   jfp_uriage_fukabako   NUMERIC DEFAULT 0,
   jfp_uriage_b          NUMERIC DEFAULT 0,
   jfp_uriage_cd         NUMERIC DEFAULT 0,
+  ja_date               DATE,
+  market_date           DATE,
+  jfp_date              DATE,
+  container_date        DATE,
   note       TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(house_id, date)

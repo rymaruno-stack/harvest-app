@@ -136,6 +136,27 @@ body {
 }
 
 /* ===========================
+   Section Date Row
+=========================== */
+.section-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.section-date .input-label {
+  white-space: nowrap;
+}
+
+.section-date .date-input {
+  min-height: 44px;
+  font-size: 1rem;
+  flex: unset;
+  width: 170px;
+}
+
+/* ===========================
    Form Sections
 =========================== */
 .form-section {

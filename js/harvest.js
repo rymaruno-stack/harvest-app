@@ -9,6 +9,8 @@ const HOUSES = [
   { id: 3, name: '参号機' },
 ];
 
+const DATE_FIELDS = ['ja_date', 'market_date', 'jfp_date', 'container_date'];
+
 const COUNT_FIELDS = [
   'ja_nagabako_am', 'ja_fukabako_am', 'ja_hirabako_as', 'ja_hirabako_am', 'ja_10khira_am',
   'ja_regular_al', 'ja_regular_am', 'ja_regular_as', 'ja_regular_a2s',
@@ -62,6 +64,10 @@ function setFormValues(record) {
     const el = document.getElementById(f);
     if (el) el.value = record ? (record[f] ?? 0) : 0;
   });
+  DATE_FIELDS.forEach(f => {
+    const el = document.getElementById(f);
+    if (el) el.value = record ? (record[f] ?? '') : '';
+  });
   const noteEl = document.getElementById('note');
   if (noteEl) noteEl.value = record ? (record.note ?? '') : '';
 }
@@ -71,6 +77,10 @@ function getFormValues() {
   COUNT_FIELDS.forEach(f => {
     const el = document.getElementById(f);
     data[f] = el ? (parseInt(el.value, 10) || 0) : 0;
+  });
+  DATE_FIELDS.forEach(f => {
+    const el = document.getElementById(f);
+    data[f] = el ? (el.value || null) : null;
   });
   const noteEl = document.getElementById('note');
   data.note = noteEl ? noteEl.value.trim() : '';
