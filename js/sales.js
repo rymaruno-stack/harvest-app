@@ -27,6 +27,37 @@ const ALL_COUNT_FIELDS = [
 ];
 
 /* ===========================
+   出荷箱数マッピング（売上種類 → harvests フィールド）
+=========================== */
+const JA_BOX_FIELDS = {
+  nagabako:  ['ja_nagabako_am'],
+  fukabako:  ['ja_fukabako_am'],
+  hirabako:  ['ja_hirabako_as', 'ja_hirabako_am'],
+  '10k':     ['ja_10khira_am'],
+  regular:   ['ja_regular_al', 'ja_regular_am', 'ja_regular_as', 'ja_regular_a2s', 'ja_regular_bl', 'ja_regular_bm', 'ja_regular_bs'],
+  kobukuro:  ['ja_kobukuro_al', 'ja_kobukuro_bl', 'ja_kobukuro_bm', 'ja_kobukuro_cm'],
+  kikakugai: ['ja_kikakugai_dm', 'ja_kikakugai_ds'],
+};
+
+const MARKET_BOX_FIELDS = {
+  market_uriage_fukabako_a: ['market_fukabako_a'],
+  market_uriage_as:         ['market_regular_as'],
+  market_uriage_am:         ['market_regular_am'],
+  market_uriage_al:         ['market_regular_al'],
+  market_uriage_bs:         ['market_regular_bs'],
+  market_uriage_bm:         ['market_regular_bm'],
+  market_uriage_bl:         ['market_regular_bl'],
+  market_uriage_pori:       ['market_10k_pori'],
+};
+
+const JFP_BOX_FIELDS = {
+  jfp_uriage_contena:  ['jfp_contena'],
+  jfp_uriage_fukabako: ['jfp_fukabako_5kg'],
+  jfp_uriage_b:        ['jfp_b_5kg'],
+  jfp_uriage_cd:       ['jfp_cd_10kg'],
+};
+
+/* ===========================
    売上入力定数
 =========================== */
 const JA_ITEMS = [
@@ -84,6 +115,35 @@ function showToast(msg, isError = false) {
   toast.classList.remove('hidden');
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => toast.classList.add('hidden'), 2500);
+}
+
+/* ===========================
+   箱数表示（読み取り専用）
+=========================== */
+function setBoxCounts(harvestRecs, dateStr) {
+  function total(fields, dateField) {
+    return harvestRecs
+      .filter(r => r[dateField] === dateStr)
+      .reduce((s, r) => s + fields.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+  }
+
+  JA_ITEMS.forEach(i => {
+    const el = document.getElementById(`boxes_ja_${i.key}`);
+    if (el) { const n = total(JA_BOX_FIELDS[i.key], 'ja_date'); el.textContent = n > 0 ? `${n}` : '—'; }
+  });
+  MARKET_URIAGE_ITEMS.forEach(i => {
+    const el = document.getElementById(`boxes_${i.id}`);
+    if (el) { const n = total(MARKET_BOX_FIELDS[i.id], 'market_date'); el.textContent = n > 0 ? `${n}` : '—'; }
+  });
+  const containerEl = document.getElementById('boxes_market_container');
+  if (containerEl) {
+    const n = total(MARKET_CONTAINER_FIELDS, 'market_container_date');
+    containerEl.textContent = n > 0 ? `${n}` : '—';
+  }
+  JFP_URIAGE_ITEMS.forEach(i => {
+    const el = document.getElementById(`boxes_${i.id}`);
+    if (el) { const n = total(JFP_BOX_FIELDS[i.id], 'jfp_date'); el.textContent = n > 0 ? `${n}` : '—'; }
+  });
 }
 
 /* ===========================
@@ -195,6 +255,7 @@ function renderShipmentSummary(ja, market, container, jfp) {
 async function loadByReceivingDate(dateStr) {
   document.getElementById('shipment-summary').classList.add('hidden');
   setFormValues(null);
+  setBoxCounts([], dateStr);
   if (!db) return;
 
   const selectCols = [
@@ -216,14 +277,16 @@ async function loadByReceivingDate(dateStr) {
 
   if (harvestsRes.error) console.error('loadByReceivingDate harvests:', harvestsRes.error);
 
+  const harvestData = harvestsRes.data || [];
   let jaBoxes = 0, marketBoxes = 0, containerBoxes = 0, jfpBoxes = 0;
-  (harvestsRes.data || []).forEach(rec => {
+  harvestData.forEach(rec => {
     if (rec.ja_date               === dateStr) jaBoxes        += sumFields(rec, JA_COUNT_FIELDS);
     if (rec.market_date           === dateStr) marketBoxes    += sumFields(rec, MARKET_COUNT_FIELDS);
     if (rec.market_container_date === dateStr) containerBoxes += sumFields(rec, MARKET_CONTAINER_FIELDS);
     if (rec.jfp_date              === dateStr) jfpBoxes       += sumFields(rec, JFP_COUNT_FIELDS);
   });
   renderShipmentSummary(jaBoxes, marketBoxes, containerBoxes, jfpBoxes);
+  setBoxCounts(harvestData, dateStr);
 
   if (salesRes.error && salesRes.error.code !== 'PGRST116') {
     console.error('loadByReceivingDate channel_sales:', salesRes.error);

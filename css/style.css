@@ -261,8 +261,10 @@ body {
   text-align: right;
 }
 
-.uriage-header--3col { grid-template-columns: 5.5em 1fr 1fr; }
-.uriage-header--2col { grid-template-columns: 5.5em 1fr; }
+.uriage-header--4col        { grid-template-columns: 5.5em 1fr 1fr 3.5em; }
+.uriage-header--3col        { grid-template-columns: 5.5em 1fr 1fr; }
+.uriage-header--3col-boxes  { grid-template-columns: 5.5em 1fr 3.5em; }
+.uriage-header--2col        { grid-template-columns: 5.5em 1fr; }
 
 .uriage-header > span:first-child {
   text-align: left;
@@ -276,8 +278,10 @@ body {
   border-bottom: 1px solid var(--gray-100);
 }
 
-.uriage-row--3col { grid-template-columns: 5.5em 1fr 1fr; }
-.uriage-row--2col { grid-template-columns: 5.5em 1fr; }
+.uriage-row--4col        { grid-template-columns: 5.5em 1fr 1fr 3.5em; }
+.uriage-row--3col        { grid-template-columns: 5.5em 1fr 1fr; }
+.uriage-row--3col-boxes  { grid-template-columns: 5.5em 1fr 3.5em; }
+.uriage-row--2col        { grid-template-columns: 5.5em 1fr; }
 
 .uriage-row__label {
   font-size: 0.85rem;
@@ -288,6 +292,15 @@ body {
 .uriage-row .num-input {
   min-height: 44px;
   font-size: 1rem;
+}
+
+.box-count {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--green-dark);
+  text-align: right;
+  white-space: nowrap;
+  align-self: center;
 }
 
 .uriage-subtotal {
