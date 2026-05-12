@@ -9,7 +9,7 @@ const HOUSES = [
   { id: 3, name: '参号機' },
 ];
 
-const DATE_FIELDS = ['ja_date', 'market_date', 'jfp_date', 'container_date'];
+const DATE_FIELDS = ['ja_date', 'market_date', 'market_container_date', 'jfp_date'];
 
 const COUNT_FIELDS = [
   'ja_nagabako_am', 'ja_fukabako_am', 'ja_hirabako_as', 'ja_hirabako_am', 'ja_10khira_am',
@@ -19,6 +19,7 @@ const COUNT_FIELDS = [
   'ja_kikakugai_dm', 'ja_kikakugai_ds',
   'market_fukabako_a', 'market_regular_as', 'market_regular_am', 'market_regular_al',
   'market_regular_bs', 'market_regular_bm', 'market_regular_bl', 'market_10k_pori',
+  'market_contena',
   'jfp_contena', 'jfp_fukabako_5kg', 'jfp_b_5kg', 'jfp_cd_10kg',
 ];
 

@@ -12,9 +12,10 @@
   --gray-400:     #BDBDBD;
   --gray-700:     #616161;
   --text-dark:    #212121;
-  --market-color: #1565C0;
-  --jfp-color:    #6A1B9A;
-  --uriage-color: #E65100;
+  --market-color:           #1565C0;
+  --market-container-color: #00695C;
+  --jfp-color:              #6A1B9A;
+  --uriage-color:           #E65100;
   --shadow:       0 2px 8px rgba(0,0,0,0.12);
   --radius:       8px;
 }
@@ -176,10 +177,11 @@ body {
   color: var(--white);
 }
 
-.section-title--ja      { background: var(--green-mid); }
-.section-title--market  { background: var(--market-color); }
-.section-title--jfp     { background: var(--jfp-color); }
-.section-title--uriage  { background: var(--uriage-color); }
+.section-title--ja               { background: var(--green-mid); }
+.section-title--market           { background: var(--market-color); }
+.section-title--market-container { background: var(--market-container-color); }
+.section-title--jfp              { background: var(--jfp-color); }
+.section-title--uriage           { background: var(--uriage-color); }
 
 .subsection-title {
   font-size: 0.95rem;

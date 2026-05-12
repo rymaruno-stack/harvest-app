@@ -14,6 +14,7 @@ const JA_COUNT_FIELDS = [
 const MARKET_COUNT_FIELDS = [
   'market_fukabako_a', 'market_regular_as', 'market_regular_am', 'market_regular_al',
   'market_regular_bs', 'market_regular_bm', 'market_regular_bl', 'market_10k_pori',
+  'market_contena',
 ];
 
 const JFP_COUNT_FIELDS = [
