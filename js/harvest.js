@@ -223,7 +223,6 @@ async function loadHistory() {
     container.querySelectorAll('.history-card').forEach(card => {
       card.addEventListener('click', () => {
         currentDate = card.dataset.date;
-        document.getElementById('date-input').value = currentDate;
         loadRecord();
         loadTodayTotals();
       });
@@ -259,17 +258,6 @@ function initDetailToggles() {
   });
 }
 
-function initDateInput() {
-  const input = document.getElementById('date-input');
-  input.value = currentDate;
-  input.addEventListener('change', () => {
-    currentDate = input.value;
-    loadRecord();
-    loadTodayTotals();
-    loadHistory();
-  });
-}
-
 function initForm() {
   document.getElementById('harvest-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -280,7 +268,6 @@ function initForm() {
 document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   initDetailToggles();
-  initDateInput();
   initForm();
   await loadRecord();
   await Promise.all([loadTodayTotals(), loadHistory()]);

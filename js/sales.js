@@ -57,7 +57,8 @@ const JFP_URIAGE_ITEMS = [
   { id: 'jfp_uriage_cd',       label: 'CD10kg' },
 ];
 
-let receivingDate = getTodayStr();
+let receivingDate  = getTodayStr();
+let currentHouseId = 1;
 
 /* ===========================
    ユーティリティ
@@ -109,7 +110,7 @@ function setFormValues(record) {
 }
 
 function getFormValues() {
-  const data = { receiving_date: receivingDate };
+  const data = { receiving_date: receivingDate, house_id: currentHouseId };
 
   let jaTotal = 0;
   JA_ITEMS.forEach(i => {
@@ -204,10 +205,12 @@ async function loadByReceivingDate(dateStr) {
   const [harvestsRes, salesRes] = await Promise.all([
     db.from('harvests')
       .select(selectCols)
+      .eq('house_id', currentHouseId)
       .or(`ja_date.eq.${dateStr},market_date.eq.${dateStr},market_container_date.eq.${dateStr},jfp_date.eq.${dateStr}`),
     db.from('channel_sales')
       .select('*')
       .eq('receiving_date', dateStr)
+      .eq('house_id', currentHouseId)
       .single(),
   ]);
 
@@ -237,7 +240,7 @@ async function saveRecord() {
     if (!db) throw new Error('Supabase未接続');
     const { error } = await db
       .from('channel_sales')
-      .upsert(getFormValues(), { onConflict: 'receiving_date' });
+      .upsert(getFormValues(), { onConflict: 'receiving_date,house_id' });
     if (error) throw error;
     showToast('保存しました');
     await loadHistory();
@@ -258,6 +261,7 @@ async function loadHistory() {
     const { data, error } = await db
       .from('channel_sales')
       .select('receiving_date, ja_uriage, market_uriage, market_container_uriage, jfp_uriage')
+      .eq('house_id', currentHouseId)
       .order('receiving_date', { ascending: false })
       .limit(10);
 
@@ -300,6 +304,18 @@ async function loadHistory() {
 /* ===========================
    初期化
 =========================== */
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentHouseId = parseInt(btn.dataset.houseId, 10);
+      loadByReceivingDate(receivingDate);
+      loadHistory();
+    });
+  });
+}
+
 function initDateInput() {
   const input = document.getElementById('receiving-date');
   input.value = receivingDate;
@@ -328,6 +344,7 @@ function initForm() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  initTabs();
   initDateInput();
   initForm();
   await Promise.all([loadByReceivingDate(receivingDate), loadHistory()]);
