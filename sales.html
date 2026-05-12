@@ -18,53 +18,28 @@
 
 <main class="main">
 
-  <!-- ハウス選択タブ -->
-  <div class="tab-bar">
-    <button class="tab-btn active" data-house-id="1">初号機</button>
-    <button class="tab-btn"        data-house-id="2">弐号機</button>
-    <button class="tab-btn"        data-house-id="3">参号機</button>
-  </div>
-
-  <!-- 日付選択 -->
+  <!-- 荷受日選択 -->
   <div class="date-section">
-    <label class="date-label" for="date-input">日付</label>
-    <input type="date" id="date-input" class="date-input">
+    <label class="date-label" for="receiving-date">荷受日</label>
+    <input type="date" id="receiving-date" class="date-input">
   </div>
 
-  <!-- 入力フォーム -->
+  <!-- 出荷実績サマリー（荷受日一致レコードを自動表示） -->
+  <div id="shipment-summary" class="form-section hidden">
+    <h2 class="section-title" style="background:var(--green-dark)">対象出荷実績</h2>
+    <div id="shipment-summary-cards" class="today-total__cards" style="margin-top:8px"></div>
+  </div>
+
+  <!-- 売上入力フォーム -->
   <form id="sales-form">
 
     <!-- JA 売上 -->
     <section class="form-section">
-      <h2 class="section-title section-title--uriage">JA 売上</h2>
+      <h2 class="section-title section-title--ja">JA 売上</h2>
       <div class="input-grid">
         <div class="input-item">
-          <label class="input-label" for="ja_uriage_regular">レギュラー</label>
-          <input type="number" id="ja_uriage_regular" name="ja_uriage_regular" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="ja_uriage_kobukuro">小袋</label>
-          <input type="number" id="ja_uriage_kobukuro" name="ja_uriage_kobukuro" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="ja_uriage_kikakugai">規格外</label>
-          <input type="number" id="ja_uriage_kikakugai" name="ja_uriage_kikakugai" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="ja_uriage_fukabako">深箱</label>
-          <input type="number" id="ja_uriage_fukabako" name="ja_uriage_fukabako" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="ja_uriage_hirabako">平箱</label>
-          <input type="number" id="ja_uriage_hirabako" name="ja_uriage_hirabako" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="ja_uriage_10k">10k</label>
-          <input type="number" id="ja_uriage_10k" name="ja_uriage_10k" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="ja_uriage_nagabako">長箱</label>
-          <input type="number" id="ja_uriage_nagabako" name="ja_uriage_nagabako" class="num-input num-input--money" min="0" step="1" value="0">
+          <label class="input-label" for="ja_uriage">合計金額</label>
+          <input type="number" id="ja_uriage" name="ja_uriage" class="num-input num-input--money" min="0" step="1" value="0">
         </div>
       </div>
     </section>
@@ -74,36 +49,19 @@
       <h2 class="section-title section-title--market">市場 売上</h2>
       <div class="input-grid">
         <div class="input-item">
-          <label class="input-label" for="market_uriage_as">AS</label>
-          <input type="number" id="market_uriage_as" name="market_uriage_as" class="num-input num-input--money" min="0" step="1" value="0">
+          <label class="input-label" for="market_uriage">合計金額</label>
+          <input type="number" id="market_uriage" name="market_uriage" class="num-input num-input--money" min="0" step="1" value="0">
         </div>
+      </div>
+    </section>
+
+    <!-- 市場コンテナ 売上 -->
+    <section class="form-section">
+      <h2 class="section-title section-title--market-container">市場コンテナ 売上</h2>
+      <div class="input-grid">
         <div class="input-item">
-          <label class="input-label" for="market_uriage_am">AM</label>
-          <input type="number" id="market_uriage_am" name="market_uriage_am" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="market_uriage_al">AL</label>
-          <input type="number" id="market_uriage_al" name="market_uriage_al" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="market_uriage_bm">BM</label>
-          <input type="number" id="market_uriage_bm" name="market_uriage_bm" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="market_uriage_bl">BL</label>
-          <input type="number" id="market_uriage_bl" name="market_uriage_bl" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="market_uriage_bs">BS</label>
-          <input type="number" id="market_uriage_bs" name="market_uriage_bs" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="market_uriage_fukabako_a">深箱A</label>
-          <input type="number" id="market_uriage_fukabako_a" name="market_uriage_fukabako_a" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="market_uriage_pori">ポリ</label>
-          <input type="number" id="market_uriage_pori" name="market_uriage_pori" class="num-input num-input--money" min="0" step="1" value="0">
+          <label class="input-label" for="market_container_uriage">合計金額</label>
+          <input type="number" id="market_container_uriage" name="market_container_uriage" class="num-input num-input--money" min="0" step="1" value="0">
         </div>
       </div>
     </section>
@@ -113,25 +71,13 @@
       <h2 class="section-title section-title--jfp">JFP 売上</h2>
       <div class="input-grid">
         <div class="input-item">
-          <label class="input-label" for="jfp_uriage_contena">コンテナ</label>
-          <input type="number" id="jfp_uriage_contena" name="jfp_uriage_contena" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="jfp_uriage_fukabako">深箱</label>
-          <input type="number" id="jfp_uriage_fukabako" name="jfp_uriage_fukabako" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="jfp_uriage_b">B</label>
-          <input type="number" id="jfp_uriage_b" name="jfp_uriage_b" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
-        <div class="input-item">
-          <label class="input-label" for="jfp_uriage_cd">CD</label>
-          <input type="number" id="jfp_uriage_cd" name="jfp_uriage_cd" class="num-input num-input--money" min="0" step="1" value="0">
+          <label class="input-label" for="jfp_uriage">合計金額</label>
+          <input type="number" id="jfp_uriage" name="jfp_uriage" class="num-input num-input--money" min="0" step="1" value="0">
         </div>
       </div>
     </section>
 
-    <!-- 入力中合計 -->
+    <!-- 合計 -->
     <section class="form-section">
       <h2 class="section-title section-title--uriage">合計</h2>
       <div class="today-total__cards" style="margin-top:8px">
@@ -142,6 +88,10 @@
         <div class="total-card">
           <div class="total-card__house">市場</div>
           <div class="total-card__money" id="total-market" style="font-size:1.2rem;font-weight:700">¥0</div>
+        </div>
+        <div class="total-card">
+          <div class="total-card__house">市場コンテナ</div>
+          <div class="total-card__money" id="total-market-container" style="font-size:1.2rem;font-weight:700">¥0</div>
         </div>
         <div class="total-card">
           <div class="total-card__house">JFP</div>
@@ -161,9 +111,9 @@
 
   </form>
 
-  <!-- 過去7日間の履歴 -->
+  <!-- 直近の売上履歴 -->
   <div class="history-section">
-    <h2 class="history-title">過去7日間の売上履歴</h2>
+    <h2 class="history-title">直近の売上履歴</h2>
     <div id="history-cards" class="history-cards">
       <div class="loading">読み込み中...</div>
     </div>

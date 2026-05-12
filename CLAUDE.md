@@ -116,6 +116,16 @@ CREATE TABLE harvests (
   UNIQUE(house_id, date)
 );
 
+CREATE TABLE channel_sales (
+  receiving_date           DATE PRIMARY KEY,
+  ja_uriage                NUMERIC DEFAULT 0,
+  market_uriage            NUMERIC DEFAULT 0,
+  market_container_uriage  NUMERIC DEFAULT 0,
+  jfp_uriage               NUMERIC DEFAULT 0,
+  note                     TEXT,
+  created_at               TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE weather_logs (
   date         DATE PRIMARY KEY,
   temp_max     NUMERIC,
@@ -125,12 +135,14 @@ CREATE TABLE weather_logs (
   fetched_at   TIMESTAMPTZ DEFAULT now()
 );
 
-ALTER TABLE houses       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE harvests     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE weather_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE houses         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE harvests       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE channel_sales  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE weather_logs   ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow all" ON houses       FOR ALL USING (true);
-CREATE POLICY "Allow all" ON harvests     FOR ALL USING (true);
+CREATE POLICY "Allow all" ON houses         FOR ALL USING (true);
+CREATE POLICY "Allow all" ON harvests       FOR ALL USING (true);
+CREATE POLICY "Allow all" ON channel_sales  FOR ALL USING (true);
 CREATE POLICY "Allow all" ON weather_logs FOR ALL USING (true);
 
 INSERT INTO houses (name, area_a) VALUES

@@ -21,16 +21,8 @@ const JFP_COUNT_FIELDS = [
   'jfp_contena', 'jfp_fukabako_5kg', 'jfp_b_5kg', 'jfp_cd_10kg',
 ];
 
-const URIAGE_FIELDS = [
-  'ja_uriage_nagabako', 'ja_uriage_fukabako', 'ja_uriage_hirabako', 'ja_uriage_10k',
-  'ja_uriage_regular', 'ja_uriage_kobukuro', 'ja_uriage_kikakugai',
-  'market_uriage_fukabako_a', 'market_uriage_as', 'market_uriage_am', 'market_uriage_al',
-  'market_uriage_bs', 'market_uriage_bm', 'market_uriage_bl', 'market_uriage_pori',
-  'jfp_uriage_contena', 'jfp_uriage_fukabako', 'jfp_uriage_b', 'jfp_uriage_cd',
-];
-
 const ALL_COUNT_FIELDS = [...JA_COUNT_FIELDS, ...MARKET_COUNT_FIELDS, ...JFP_COUNT_FIELDS];
-const ALL_FETCH_FIELDS = ['house_id', 'date', ...ALL_COUNT_FIELDS, ...URIAGE_FIELDS];
+const ALL_FETCH_FIELDS = ['house_id', 'date', ...ALL_COUNT_FIELDS];
 
 const HOUSES = [
   { id: 1, name: '初号機' },
@@ -128,11 +120,10 @@ function aggregateByDate(records) {
   const map = {};
   records.forEach(rec => {
     const key = rec.date;
-    if (!map[key]) map[key] = { date: key, ja: 0, market: 0, jfp: 0, uriage: 0 };
+    if (!map[key]) map[key] = { date: key, ja: 0, market: 0, jfp: 0 };
     map[key].ja     += sumFields(rec, JA_COUNT_FIELDS);
     map[key].market += sumFields(rec, MARKET_COUNT_FIELDS);
     map[key].jfp    += sumFields(rec, JFP_COUNT_FIELDS);
-    map[key].uriage += sumFields(rec, URIAGE_FIELDS);
   });
   return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -141,11 +132,10 @@ function aggregateByMonth(records) {
   const map = {};
   records.forEach(rec => {
     const key = rec.date.slice(0, 7); // YYYY-MM
-    if (!map[key]) map[key] = { month: key, ja: 0, market: 0, jfp: 0, uriage: 0 };
+    if (!map[key]) map[key] = { month: key, ja: 0, market: 0, jfp: 0 };
     map[key].ja     += sumFields(rec, JA_COUNT_FIELDS);
     map[key].market += sumFields(rec, MARKET_COUNT_FIELDS);
     map[key].jfp    += sumFields(rec, JFP_COUNT_FIELDS);
-    map[key].uriage += sumFields(rec, URIAGE_FIELDS);
   });
   return Object.values(map).sort((a, b) => a.month.localeCompare(b.month));
 }
@@ -154,13 +144,12 @@ function aggregateByHouse(records) {
   const map = {};
   records.forEach(rec => {
     const key = rec.house_id;
-    if (!map[key]) map[key] = { house_id: key, ja: 0, market: 0, jfp: 0, uriage: 0 };
+    if (!map[key]) map[key] = { house_id: key, ja: 0, market: 0, jfp: 0 };
     map[key].ja     += sumFields(rec, JA_COUNT_FIELDS);
     map[key].market += sumFields(rec, MARKET_COUNT_FIELDS);
     map[key].jfp    += sumFields(rec, JFP_COUNT_FIELDS);
-    map[key].uriage += sumFields(rec, URIAGE_FIELDS);
   });
-  return HOUSES.map(h => map[h.id] || { house_id: h.id, ja: 0, market: 0, jfp: 0, uriage: 0 });
+  return HOUSES.map(h => map[h.id] || { house_id: h.id, ja: 0, market: 0, jfp: 0 });
 }
 
 /* ===========================
@@ -183,6 +172,16 @@ async function fetchHarvests(from, to) {
   return data || [];
 }
 
+async function fetchChannelSales(from, to) {
+  const { data, error } = await db
+    .from('channel_sales')
+    .select('ja_uriage, market_uriage, market_container_uriage, jfp_uriage')
+    .gte('receiving_date', from)
+    .lte('receiving_date', to);
+  if (error) { console.error('fetchChannelSales:', error); return []; }
+  return data || [];
+}
+
 async function fetchWeather(from, to) {
   const { data, error } = await db
     .from('weather_logs')
@@ -198,15 +197,14 @@ async function fetchWeather(from, to) {
 /* ===========================
    サマリーカード
 =========================== */
-function renderSummary(aggregated, unitLabel) {
-  const totalBoxes  = aggregated.reduce((s, r) => s + r.ja + r.market + r.jfp, 0);
-  const totalUriage = aggregated.reduce((s, r) => s + r.uriage, 0);
-  const count       = aggregated.length || 1;
-  const avg         = Math.round(totalBoxes / count);
+function renderSummary(aggregated, unitLabel, totalUriage = 0) {
+  const totalBoxes = aggregated.reduce((s, r) => s + r.ja + r.market + r.jfp, 0);
+  const count      = aggregated.length || 1;
+  const avg        = Math.round(totalBoxes / count);
 
-  document.getElementById('summary-boxes').textContent   = `${totalBoxes.toLocaleString()} 箱`;
-  document.getElementById('summary-uriage').textContent  = `¥${totalUriage.toLocaleString()}`;
-  document.getElementById('summary-avg').textContent     = `${avg.toLocaleString()} 箱`;
+  document.getElementById('summary-boxes').textContent    = `${totalBoxes.toLocaleString()} 箱`;
+  document.getElementById('summary-uriage').textContent   = `¥${totalUriage.toLocaleString()}`;
+  document.getElementById('summary-avg').textContent      = `${avg.toLocaleString()} 箱`;
   document.getElementById('summary-avg-label').textContent = unitLabel;
 }
 
@@ -394,10 +392,15 @@ async function refresh() {
 
   // 気温は週・月のみ取得
   const needWeather = currentPeriod === 'week' || currentPeriod === 'month';
-  const [records, weatherRaw] = await Promise.all([
+  const [records, weatherRaw, channelSalesRaw] = await Promise.all([
     fetchHarvests(from, to),
     needWeather ? fetchWeather(from, to) : Promise.resolve([]),
+    fetchChannelSales(from, to),
   ]);
+
+  const totalUriage = channelSalesRaw.reduce((s, r) =>
+    s + (Number(r.ja_uriage) || 0) + (Number(r.market_uriage) || 0) +
+    (Number(r.market_container_uriage) || 0) + (Number(r.jfp_uriage) || 0), 0);
 
   // 気温を日付キーでマップ
   const weatherByDate = {};
@@ -414,7 +417,7 @@ async function refresh() {
     const byHouse = aggregateByHouse(records);
     const labels  = HOUSES.map(h => h.name);
     renderShipmentChart(labels, byHouse.map(r => r.ja), byHouse.map(r => r.market), byHouse.map(r => r.jfp), null);
-    renderSummary(byHouse, '本日合計');
+    renderSummary(byHouse, '本日合計', totalUriage);
     cumulChart = destroyChart(cumulChart);
     document.getElementById('cumulative-card').style.display = 'none';
     return;
@@ -424,7 +427,7 @@ async function refresh() {
     const byMonth = aggregateByMonth(records);
     const labels  = byMonth.map(r => formatMonthLabel(r.month));
     renderShipmentChart(labels, byMonth.map(r => r.ja), byMonth.map(r => r.market), byMonth.map(r => r.jfp), null);
-    renderSummary(byMonth, '月平均');
+    renderSummary(byMonth, '月平均', totalUriage);
     cumulChart = destroyChart(cumulChart);
     document.getElementById('cumulative-card').style.display = 'none';
     return;
@@ -438,7 +441,7 @@ async function refresh() {
   byDate.forEach(r => { weatherByLabel[formatDateLabel(r.date, currentPeriod)] = weatherByDate[r.date]; });
 
   renderShipmentChart(labels, byDate.map(r => r.ja), byDate.map(r => r.market), byDate.map(r => r.jfp), weatherByLabel);
-  renderSummary(byDate, currentPeriod === 'week' ? '日平均' : '日平均');
+  renderSummary(byDate, currentPeriod === 'week' ? '日平均' : '日平均', totalUriage);
   renderCumulativeChart(byDate);
 }
 
