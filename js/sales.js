@@ -26,7 +26,36 @@ const ALL_COUNT_FIELDS = [
   ...JA_COUNT_FIELDS, ...MARKET_COUNT_FIELDS, ...MARKET_CONTAINER_FIELDS, ...JFP_COUNT_FIELDS,
 ];
 
-const URIAGE_FIELDS = ['ja_uriage', 'market_uriage', 'market_container_uriage', 'jfp_uriage'];
+/* ===========================
+   売上入力定数
+=========================== */
+const JA_ITEMS = [
+  { key: 'nagabako',  label: '長箱AM' },
+  { key: 'fukabako',  label: '深箱AM' },
+  { key: 'hirabako',  label: '平箱' },
+  { key: '10k',       label: '10k平' },
+  { key: 'regular',   label: 'レギュラー' },
+  { key: 'kobukuro',  label: '小袋' },
+  { key: 'kikakugai', label: '規格外' },
+];
+
+const MARKET_URIAGE_ITEMS = [
+  { id: 'market_uriage_fukabako_a', label: '深箱A' },
+  { id: 'market_uriage_as',         label: 'AS' },
+  { id: 'market_uriage_am',         label: 'AM' },
+  { id: 'market_uriage_al',         label: 'AL' },
+  { id: 'market_uriage_bs',         label: 'BS' },
+  { id: 'market_uriage_bm',         label: 'BM' },
+  { id: 'market_uriage_bl',         label: 'BL' },
+  { id: 'market_uriage_pori',       label: 'ポリ' },
+];
+
+const JFP_URIAGE_ITEMS = [
+  { id: 'jfp_uriage_contena',  label: 'コンテナ' },
+  { id: 'jfp_uriage_fukabako', label: '深箱5kg' },
+  { id: 'jfp_uriage_b',        label: 'B5kg' },
+  { id: 'jfp_uriage_cd',       label: 'CD10kg' },
+];
 
 let receivingDate = getTodayStr();
 
@@ -60,38 +89,80 @@ function showToast(msg, isError = false) {
    フォーム操作
 =========================== */
 function setFormValues(record) {
-  URIAGE_FIELDS.forEach(f => {
-    const el = document.getElementById(f);
-    if (el) el.value = record ? (record[f] ?? 0) : 0;
+  JA_ITEMS.forEach(i => {
+    const amtEl = document.getElementById(`ja_uriage_${i.key}`);
+    const wgtEl = document.getElementById(`ja_weight_${i.key}`);
+    if (amtEl) amtEl.value = record ? (record[`ja_uriage_${i.key}`] ?? 0) : 0;
+    if (wgtEl) wgtEl.value = record ? (record[`ja_weight_${i.key}`] ?? 0) : 0;
+  });
+  MARKET_URIAGE_ITEMS.forEach(i => {
+    const el = document.getElementById(i.id);
+    if (el) el.value = record ? (record[i.id] ?? 0) : 0;
+  });
+  const containerEl = document.getElementById('market_container_uriage');
+  if (containerEl) containerEl.value = record ? (record.market_container_uriage ?? 0) : 0;
+  JFP_URIAGE_ITEMS.forEach(i => {
+    const el = document.getElementById(i.id);
+    if (el) el.value = record ? (record[i.id] ?? 0) : 0;
   });
   updateTotals();
 }
 
 function getFormValues() {
   const data = { receiving_date: receivingDate };
-  URIAGE_FIELDS.forEach(f => {
-    const el = document.getElementById(f);
-    data[f] = el ? (parseFloat(el.value) || 0) : 0;
+
+  let jaTotal = 0;
+  JA_ITEMS.forEach(i => {
+    const amt = parseFloat(document.getElementById(`ja_uriage_${i.key}`)?.value) || 0;
+    const wgt = parseFloat(document.getElementById(`ja_weight_${i.key}`)?.value) || 0;
+    data[`ja_uriage_${i.key}`] = amt;
+    data[`ja_weight_${i.key}`] = wgt;
+    jaTotal += amt;
   });
+  data.ja_uriage = jaTotal;
+
+  let marketTotal = 0;
+  MARKET_URIAGE_ITEMS.forEach(i => {
+    const amt = parseFloat(document.getElementById(i.id)?.value) || 0;
+    data[i.id] = amt;
+    marketTotal += amt;
+  });
+  data.market_uriage = marketTotal;
+
+  data.market_container_uriage = parseFloat(document.getElementById('market_container_uriage')?.value) || 0;
+
+  let jfpTotal = 0;
+  JFP_URIAGE_ITEMS.forEach(i => {
+    const amt = parseFloat(document.getElementById(i.id)?.value) || 0;
+    data[i.id] = amt;
+    jfpTotal += amt;
+  });
+  data.jfp_uriage = jfpTotal;
+
   return data;
 }
 
 function updateTotals() {
-  const ja        = parseFloat(document.getElementById('ja_uriage')?.value)                || 0;
-  const market    = parseFloat(document.getElementById('market_uriage')?.value)            || 0;
-  const container = parseFloat(document.getElementById('market_container_uriage')?.value)  || 0;
-  const jfp       = parseFloat(document.getElementById('jfp_uriage')?.value)               || 0;
-  const grand     = ja + market + container + jfp;
+  const jaTotal        = JA_ITEMS.reduce((s, i) => s + (parseFloat(document.getElementById(`ja_uriage_${i.key}`)?.value) || 0), 0);
+  const marketTotal    = MARKET_URIAGE_ITEMS.reduce((s, i) => s + (parseFloat(document.getElementById(i.id)?.value) || 0), 0);
+  const containerTotal = parseFloat(document.getElementById('market_container_uriage')?.value) || 0;
+  const jfpTotal       = JFP_URIAGE_ITEMS.reduce((s, i) => s + (parseFloat(document.getElementById(i.id)?.value) || 0), 0);
+  const grand          = jaTotal + marketTotal + containerTotal + jfpTotal;
 
-  document.getElementById('total-ja').textContent               = `¥${ja.toLocaleString()}`;
-  document.getElementById('total-market').textContent           = `¥${market.toLocaleString()}`;
-  document.getElementById('total-market-container').textContent = `¥${container.toLocaleString()}`;
-  document.getElementById('total-jfp').textContent              = `¥${jfp.toLocaleString()}`;
+  document.getElementById('subtotal-ja').textContent               = `¥${jaTotal.toLocaleString()}`;
+  document.getElementById('subtotal-market').textContent           = `¥${marketTotal.toLocaleString()}`;
+  document.getElementById('subtotal-market-container').textContent = `¥${containerTotal.toLocaleString()}`;
+  document.getElementById('subtotal-jfp').textContent              = `¥${jfpTotal.toLocaleString()}`;
+
+  document.getElementById('total-ja').textContent               = `¥${jaTotal.toLocaleString()}`;
+  document.getElementById('total-market').textContent           = `¥${marketTotal.toLocaleString()}`;
+  document.getElementById('total-market-container').textContent = `¥${containerTotal.toLocaleString()}`;
+  document.getElementById('total-jfp').textContent              = `¥${jfpTotal.toLocaleString()}`;
   document.getElementById('total-grand').textContent            = `¥${grand.toLocaleString()}`;
 }
 
 /* ===========================
-   出荷実績サマリー表示
+   出荷実績サマリー表示（読み取り専用）
 =========================== */
 function renderShipmentSummary(ja, market, container, jfp) {
   const section = document.getElementById('shipment-summary');
@@ -142,7 +213,6 @@ async function loadByReceivingDate(dateStr) {
 
   if (harvestsRes.error) console.error('loadByReceivingDate harvests:', harvestsRes.error);
 
-  // チャンネルごとに箱数を集計（各レコードの荷受日カラムで振り分け）
   let jaBoxes = 0, marketBoxes = 0, containerBoxes = 0, jfpBoxes = 0;
   (harvestsRes.data || []).forEach(rec => {
     if (rec.ja_date               === dateStr) jaBoxes        += sumFields(rec, JA_COUNT_FIELDS);
@@ -152,7 +222,6 @@ async function loadByReceivingDate(dateStr) {
   });
   renderShipmentSummary(jaBoxes, marketBoxes, containerBoxes, jfpBoxes);
 
-  // 売上レコード取得（PGRST116 = 該当行なし、正常）
   if (salesRes.error && salesRes.error.code !== 'PGRST116') {
     console.error('loadByReceivingDate channel_sales:', salesRes.error);
   }
@@ -188,7 +257,7 @@ async function loadHistory() {
   try {
     const { data, error } = await db
       .from('channel_sales')
-      .select('*')
+      .select('receiving_date, ja_uriage, market_uriage, market_container_uriage, jfp_uriage')
       .order('receiving_date', { ascending: false })
       .limit(10);
 
@@ -198,7 +267,8 @@ async function loadHistory() {
     }
 
     container.innerHTML = data.map(rec => {
-      const total = URIAGE_FIELDS.reduce((s, f) => s + (Number(rec[f]) || 0), 0);
+      const total = (Number(rec.ja_uriage) || 0) + (Number(rec.market_uriage) || 0) +
+                    (Number(rec.market_container_uriage) || 0) + (Number(rec.jfp_uriage) || 0);
       const parts = [
         rec.ja_uriage               > 0 ? `JA:¥${Number(rec.ja_uriage).toLocaleString()}`                             : '',
         rec.market_uriage           > 0 ? `市場:¥${Number(rec.market_uriage).toLocaleString()}`                        : '',
@@ -244,7 +314,14 @@ function initForm() {
     e.preventDefault();
     await saveRecord();
   });
-  URIAGE_FIELDS.forEach(f => {
+
+  const amountFields = [
+    ...JA_ITEMS.map(i => `ja_uriage_${i.key}`),
+    ...MARKET_URIAGE_ITEMS.map(i => i.id),
+    'market_container_uriage',
+    ...JFP_URIAGE_ITEMS.map(i => i.id),
+  ];
+  amountFields.forEach(f => {
     const el = document.getElementById(f);
     if (el) el.addEventListener('input', updateTotals);
   });

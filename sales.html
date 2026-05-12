@@ -24,7 +24,7 @@
     <input type="date" id="receiving-date" class="date-input">
   </div>
 
-  <!-- 出荷実績サマリー（荷受日一致レコードを自動表示） -->
+  <!-- 出荷実績サマリー（荷受日一致レコードを自動表示・読み取り専用） -->
   <div id="shipment-summary" class="form-section hidden">
     <h2 class="section-title" style="background:var(--green-dark)">対象出荷実績</h2>
     <div id="shipment-summary-cards" class="today-total__cards" style="margin-top:8px"></div>
@@ -36,44 +36,135 @@
     <!-- JA 売上 -->
     <section class="form-section">
       <h2 class="section-title section-title--ja">JA 売上</h2>
-      <div class="input-grid">
-        <div class="input-item">
-          <label class="input-label" for="ja_uriage">合計金額</label>
-          <input type="number" id="ja_uriage" name="ja_uriage" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
+      <div class="uriage-header uriage-header--3col">
+        <span>種類</span><span>重量 (kg)</span><span>金額 (円)</span>
+      </div>
+      <div class="uriage-row uriage-row--3col">
+        <span class="uriage-row__label">長箱AM</span>
+        <input type="number" id="ja_weight_nagabako"  class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_uriage_nagabako"  class="num-input num-input--money"  min="0" step="1"   value="0">
+      </div>
+      <div class="uriage-row uriage-row--3col">
+        <span class="uriage-row__label">深箱AM</span>
+        <input type="number" id="ja_weight_fukabako"  class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_uriage_fukabako"  class="num-input num-input--money"  min="0" step="1"   value="0">
+      </div>
+      <div class="uriage-row uriage-row--3col">
+        <span class="uriage-row__label">平箱</span>
+        <input type="number" id="ja_weight_hirabako"  class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_uriage_hirabako"  class="num-input num-input--money"  min="0" step="1"   value="0">
+      </div>
+      <div class="uriage-row uriage-row--3col">
+        <span class="uriage-row__label">10k平</span>
+        <input type="number" id="ja_weight_10k"       class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_uriage_10k"       class="num-input num-input--money"  min="0" step="1"   value="0">
+      </div>
+      <div class="uriage-row uriage-row--3col">
+        <span class="uriage-row__label">レギュラー</span>
+        <input type="number" id="ja_weight_regular"   class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_uriage_regular"   class="num-input num-input--money"  min="0" step="1"   value="0">
+      </div>
+      <div class="uriage-row uriage-row--3col">
+        <span class="uriage-row__label">小袋</span>
+        <input type="number" id="ja_weight_kobukuro"  class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_uriage_kobukuro"  class="num-input num-input--money"  min="0" step="1"   value="0">
+      </div>
+      <div class="uriage-row uriage-row--3col">
+        <span class="uriage-row__label">規格外</span>
+        <input type="number" id="ja_weight_kikakugai" class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_uriage_kikakugai" class="num-input num-input--money"  min="0" step="1"   value="0">
+      </div>
+      <div class="uriage-subtotal">
+        <span class="uriage-subtotal__label">JA 合計</span>
+        <span class="uriage-subtotal__value" id="subtotal-ja">¥0</span>
       </div>
     </section>
 
     <!-- 市場 売上 -->
     <section class="form-section">
       <h2 class="section-title section-title--market">市場 売上</h2>
-      <div class="input-grid">
-        <div class="input-item">
-          <label class="input-label" for="market_uriage">合計金額</label>
-          <input type="number" id="market_uriage" name="market_uriage" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
+      <div class="uriage-header uriage-header--2col">
+        <span>種類</span><span>金額 (円)</span>
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">深箱A</span>
+        <input type="number" id="market_uriage_fukabako_a" class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">AS</span>
+        <input type="number" id="market_uriage_as"         class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">AM</span>
+        <input type="number" id="market_uriage_am"         class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">AL</span>
+        <input type="number" id="market_uriage_al"         class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">BS</span>
+        <input type="number" id="market_uriage_bs"         class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">BM</span>
+        <input type="number" id="market_uriage_bm"         class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">BL</span>
+        <input type="number" id="market_uriage_bl"         class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">ポリ</span>
+        <input type="number" id="market_uriage_pori"       class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-subtotal">
+        <span class="uriage-subtotal__label">市場 合計</span>
+        <span class="uriage-subtotal__value" id="subtotal-market">¥0</span>
       </div>
     </section>
 
     <!-- 市場コンテナ 売上 -->
     <section class="form-section">
       <h2 class="section-title section-title--market-container">市場コンテナ 売上</h2>
-      <div class="input-grid">
-        <div class="input-item">
-          <label class="input-label" for="market_container_uriage">合計金額</label>
-          <input type="number" id="market_container_uriage" name="market_container_uriage" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
+      <div class="uriage-header uriage-header--2col">
+        <span>種類</span><span>金額 (円)</span>
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">コンテナ</span>
+        <input type="number" id="market_container_uriage" class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-subtotal">
+        <span class="uriage-subtotal__label">市場コンテナ 合計</span>
+        <span class="uriage-subtotal__value" id="subtotal-market-container">¥0</span>
       </div>
     </section>
 
     <!-- JFP 売上 -->
     <section class="form-section">
       <h2 class="section-title section-title--jfp">JFP 売上</h2>
-      <div class="input-grid">
-        <div class="input-item">
-          <label class="input-label" for="jfp_uriage">合計金額</label>
-          <input type="number" id="jfp_uriage" name="jfp_uriage" class="num-input num-input--money" min="0" step="1" value="0">
-        </div>
+      <div class="uriage-header uriage-header--2col">
+        <span>種類</span><span>金額 (円)</span>
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">コンテナ</span>
+        <input type="number" id="jfp_uriage_contena"  class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">深箱5kg</span>
+        <input type="number" id="jfp_uriage_fukabako" class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">B5kg</span>
+        <input type="number" id="jfp_uriage_b"        class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-row uriage-row--2col">
+        <span class="uriage-row__label">CD10kg</span>
+        <input type="number" id="jfp_uriage_cd"       class="num-input num-input--money" min="0" step="1" value="0">
+      </div>
+      <div class="uriage-subtotal">
+        <span class="uriage-subtotal__label">JFP 合計</span>
+        <span class="uriage-subtotal__value" id="subtotal-jfp">¥0</span>
       </div>
     </section>
 
