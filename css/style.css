@@ -760,3 +760,98 @@ body {
 
 .allocation-bar__btn:hover  { opacity: 0.85; }
 .allocation-bar__btn:active { opacity: 0.70; }
+
+/* ===========================
+   日次ログ
+=========================== */
+.log-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.log-section__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--green-dark);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+
+.log-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 520px;
+}
+
+.log-table th,
+.log-table td {
+  padding: 6px 8px;
+  text-align: center;
+  border: 1px solid var(--gray-200);
+}
+
+.log-table thead tr:first-child th {
+  background: var(--green-dark);
+  color: var(--white);
+  font-weight: 700;
+}
+
+.log-table thead tr:nth-child(2) th {
+  background: var(--green-pale);
+  color: var(--gray-700);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.log-th-label {
+  min-width: 72px;
+}
+
+.log-th-total {
+  background: var(--uriage-color) !important;
+}
+
+.log-row-label {
+  text-align: left;
+  font-weight: 600;
+  background: var(--gray-100);
+  white-space: nowrap;
+  padding-left: 10px;
+}
+
+.log-cell-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.log-total-row td {
+  background: var(--green-pale);
+  font-weight: 700;
+}
+
+.log-per10a-row td {
+  background: #FFF8E1;
+}
+
+.log-cell-10a {
+  font-weight: 700;
+  color: var(--uriage-color);
+}
+
+.log-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--gray-700);
+  font-size: 0.9rem;
+}

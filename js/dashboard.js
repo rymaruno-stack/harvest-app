@@ -24,6 +24,18 @@ const JFP_COUNT_FIELDS = [
 const ALL_COUNT_FIELDS = [...JA_COUNT_FIELDS, ...MARKET_COUNT_FIELDS, ...JFP_COUNT_FIELDS];
 const ALL_FETCH_FIELDS = ['house_id', 'date', ...ALL_COUNT_FIELDS];
 
+// 日次ログ用
+const LOG_MARKET_BOX_FIELDS = [
+  'market_fukabako_a', 'market_regular_as', 'market_regular_am', 'market_regular_al',
+  'market_regular_bs', 'market_regular_bm', 'market_regular_bl', 'market_10k_pori',
+];
+const LOG_JA_WEIGHT_KEYS = [
+  'ja_weight_nagabako', 'ja_weight_fukabako', 'ja_weight_hirabako',
+  'ja_weight_10k', 'ja_weight_regular', 'ja_weight_kobukuro', 'ja_weight_kikakugai',
+];
+const LOG_JFP_5KG_FIELDS  = ['jfp_fukabako_5kg', 'jfp_b_5kg'];
+const LOG_JFP_10KG_FIELDS = ['jfp_contena', 'jfp_cd_10kg'];
+
 const HOUSES = [
   { id: 1, name: '初号機' },
   { id: 2, name: '弐号機' },
@@ -446,6 +458,146 @@ async function refresh() {
 }
 
 /* ===========================
+   日次ログ
+=========================== */
+async function fetchDailyLogData(dateStr) {
+  const harvestCols = [
+    'house_id', 'ja_date', 'market_date', 'market_container_date', 'jfp_date',
+    ...JA_COUNT_FIELDS, ...LOG_MARKET_BOX_FIELDS, 'market_contena',
+    ...LOG_JFP_5KG_FIELDS, ...LOG_JFP_10KG_FIELDS,
+  ].join(', ');
+
+  const [harvestsRes, salesRes] = await Promise.all([
+    db.from('harvests')
+      .select(harvestCols)
+      .or(`ja_date.eq.${dateStr},market_date.eq.${dateStr},market_container_date.eq.${dateStr},jfp_date.eq.${dateStr}`),
+    db.from('channel_sales')
+      .select(['house_id', ...LOG_JA_WEIGHT_KEYS].join(', '))
+      .eq('receiving_date', dateStr),
+  ]);
+
+  if (harvestsRes.error) console.error('fetchDailyLogData harvests:', harvestsRes.error);
+  if (salesRes.error)    console.error('fetchDailyLogData sales:', salesRes.error);
+  return { harvests: harvestsRes.data || [], sales: salesRes.data || [] };
+}
+
+function calcHouseLogStats(harvestRecs, salesRecs, houseId, dateStr) {
+  const hRecs = houseId > 0 ? harvestRecs.filter(r => r.house_id === houseId) : harvestRecs;
+
+  const jaBoxes = hRecs
+    .filter(r => r.ja_date === dateStr)
+    .reduce((s, r) => s + JA_COUNT_FIELDS.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+
+  const jaWeight = houseId > 0
+    ? LOG_JA_WEIGHT_KEYS.reduce((s, f) => s + (Number((salesRecs.find(r => r.house_id === houseId) || {})[f]) || 0), 0)
+    : salesRecs.reduce((s, r) => s + LOG_JA_WEIGHT_KEYS.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+
+  const marketBoxes = hRecs
+    .filter(r => r.market_date === dateStr)
+    .reduce((s, r) => s + LOG_MARKET_BOX_FIELDS.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+  const marketWeight = marketBoxes * 5;
+
+  const containerBoxes = hRecs
+    .filter(r => r.market_container_date === dateStr)
+    .reduce((s, r) => s + (Number(r.market_contena) || 0), 0);
+  const containerWeight = containerBoxes * 10;
+
+  const jfp5  = hRecs
+    .filter(r => r.jfp_date === dateStr)
+    .reduce((s, r) => s + LOG_JFP_5KG_FIELDS.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+  const jfp10 = hRecs
+    .filter(r => r.jfp_date === dateStr)
+    .reduce((s, r) => s + LOG_JFP_10KG_FIELDS.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+  const jfpBoxes  = jfp5 + jfp10;
+  const jfpWeight = jfp5 * 5 + jfp10 * 10;
+
+  const totalWeight = jaWeight + marketWeight + containerWeight + jfpWeight;
+  return { jaBoxes, jaWeight, marketBoxes, marketWeight, containerBoxes, containerWeight, jfpBoxes, jfpWeight, totalWeight };
+}
+
+function renderDailyLog(dateStr, harvests, sales) {
+  const container = document.getElementById('daily-log-container');
+  if (!container) return;
+
+  if (harvests.length === 0 && sales.length === 0) {
+    container.innerHTML = '<div class="log-empty">この日のデータがありません</div>';
+    return;
+  }
+
+  const cols = [
+    ...HOUSES.map(h => ({ id: h.id, name: h.name })),
+    { id: 0, name: '全体' },
+  ].map(c => ({ ...c, ...calcHouseLogStats(harvests, sales, c.id, dateStr) }));
+
+  const totalCol = cols[cols.length - 1];
+  const per10a   = totalCol.totalWeight > 0 ? (totalCol.totalWeight / 47 * 10).toFixed(1) : null;
+
+  const fmt  = n => n > 0 ? n.toLocaleString() : '—';
+  const fmtW = w => w > 0 ? w.toFixed(1) : '—';
+
+  const channels = [
+    { label: 'JA',          getB: s => s.jaBoxes,        getW: s => s.jaWeight        },
+    { label: '市場',         getB: s => s.marketBoxes,    getW: s => s.marketWeight    },
+    { label: '市場コンテナ', getB: s => s.containerBoxes, getW: s => s.containerWeight },
+    { label: 'JFP',         getB: s => s.jfpBoxes,       getW: s => s.jfpWeight       },
+  ];
+
+  const thHouses = cols.map((c, i) =>
+    `<th colspan="2" class="${i === cols.length - 1 ? 'log-th-total' : ''}">${c.name}</th>`
+  ).join('');
+
+  const thSubs = cols.map(() => '<th class="log-th-sub">箱数</th><th class="log-th-sub">重量(kg)</th>').join('');
+
+  const bodyRows = channels.map(ch => {
+    const cells = cols.map(s =>
+      `<td class="log-cell-num">${fmt(ch.getB(s))}</td><td class="log-cell-num">${fmtW(ch.getW(s))}</td>`
+    ).join('');
+    return `<tr><td class="log-row-label">${ch.label}</td>${cells}</tr>`;
+  }).join('');
+
+  const weightCells = cols.map(s =>
+    `<td class="log-cell-num" colspan="2" style="font-weight:700">${fmtW(s.totalWeight)}</td>`
+  ).join('');
+
+  const per10aRow = per10a ? (() => {
+    const cells = cols.map((_, i) => i < cols.length - 1
+      ? '<td colspan="2">—</td>'
+      : `<td class="log-cell-10a" colspan="2">${per10a} kg</td>`
+    ).join('');
+    return `<tr class="log-per10a-row"><td class="log-row-label">10a収穫量</td>${cells}</tr>`;
+  })() : '';
+
+  container.innerHTML = `
+    <div class="log-table-wrapper">
+      <table class="log-table">
+        <thead>
+          <tr><th class="log-th-label"></th>${thHouses}</tr>
+          <tr><th class="log-th-label"></th>${thSubs}</tr>
+        </thead>
+        <tbody>
+          ${bodyRows}
+          <tr class="log-total-row"><td class="log-row-label">総重量</td>${weightCells}</tr>
+          ${per10aRow}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function loadDailyLog() {
+  const dateStr = document.getElementById('log-date')?.value;
+  if (!dateStr) return;
+  const container = document.getElementById('daily-log-container');
+  if (container) container.innerHTML = '<div class="log-empty">読み込み中...</div>';
+  const { harvests, sales } = await fetchDailyLogData(dateStr);
+  renderDailyLog(dateStr, harvests, sales);
+}
+
+function initLogDateInput() {
+  const input = document.getElementById('log-date');
+  if (input) input.addEventListener('change', loadDailyLog);
+}
+
+/* ===========================
    初期化
 =========================== */
 function initPeriodTabs() {
@@ -500,5 +652,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initPeriodTabs();
   initHouseButtons();
   initMonthNav();
+  initLogDateInput();
   refresh();
 });
