@@ -20,7 +20,8 @@
 
   <!-- ハウス選択タブ -->
   <div class="tab-bar">
-    <button class="tab-btn active" data-house-id="1">初号機</button>
+    <button class="tab-btn active" data-house-id="0">全体</button>
+    <button class="tab-btn"        data-house-id="1">初号機</button>
     <button class="tab-btn"        data-house-id="2">弐号機</button>
     <button class="tab-btn"        data-house-id="3">参号機</button>
   </div>
@@ -37,6 +38,12 @@
     <div id="shipment-summary-cards" class="today-total__cards" style="margin-top:8px"></div>
   </div>
 
+  <!-- 按分バー（ハウスタブ時のみ表示） -->
+  <div id="allocation-bar" class="allocation-bar hidden">
+    <span class="allocation-bar__info">全体売上データから按分計算できます（JA: 重量比、市場/JFP: 箱数比）</span>
+    <button type="button" id="reapply-btn" class="allocation-bar__btn">按分を再計算</button>
+  </div>
+
   <!-- 売上入力フォーム -->
   <form id="sales-form">
 
@@ -44,47 +51,47 @@
     <section class="form-section">
       <h2 class="section-title section-title--ja">JA 売上</h2>
       <div class="uriage-header uriage-header--4col">
-        <span>種類</span><span>重量 (kg)</span><span>金額 (円)</span><span>箱数</span>
+        <span>種類</span><span class="ja-weight-cell">重量 (kg)</span><span>金額 (円)</span><span>箱数</span>
       </div>
       <div class="uriage-row uriage-row--4col">
         <span class="uriage-row__label">長箱AM</span>
-        <input type="number" id="ja_weight_nagabako"  class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_weight_nagabako"  class="num-input num-input--weight ja-weight-cell" min="0" step="0.1" value="0">
         <input type="number" id="ja_uriage_nagabako"  class="num-input num-input--money"  min="0" step="1"   value="0">
         <span class="box-count" id="boxes_ja_nagabako">—</span>
       </div>
       <div class="uriage-row uriage-row--4col">
         <span class="uriage-row__label">深箱AM</span>
-        <input type="number" id="ja_weight_fukabako"  class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_weight_fukabako"  class="num-input num-input--weight ja-weight-cell" min="0" step="0.1" value="0">
         <input type="number" id="ja_uriage_fukabako"  class="num-input num-input--money"  min="0" step="1"   value="0">
         <span class="box-count" id="boxes_ja_fukabako">—</span>
       </div>
       <div class="uriage-row uriage-row--4col">
         <span class="uriage-row__label">平箱</span>
-        <input type="number" id="ja_weight_hirabako"  class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_weight_hirabako"  class="num-input num-input--weight ja-weight-cell" min="0" step="0.1" value="0">
         <input type="number" id="ja_uriage_hirabako"  class="num-input num-input--money"  min="0" step="1"   value="0">
         <span class="box-count" id="boxes_ja_hirabako">—</span>
       </div>
       <div class="uriage-row uriage-row--4col">
         <span class="uriage-row__label">10k平</span>
-        <input type="number" id="ja_weight_10k"       class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_weight_10k"       class="num-input num-input--weight ja-weight-cell" min="0" step="0.1" value="0">
         <input type="number" id="ja_uriage_10k"       class="num-input num-input--money"  min="0" step="1"   value="0">
         <span class="box-count" id="boxes_ja_10k">—</span>
       </div>
       <div class="uriage-row uriage-row--4col">
         <span class="uriage-row__label">レギュラー</span>
-        <input type="number" id="ja_weight_regular"   class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_weight_regular"   class="num-input num-input--weight ja-weight-cell" min="0" step="0.1" value="0">
         <input type="number" id="ja_uriage_regular"   class="num-input num-input--money"  min="0" step="1"   value="0">
         <span class="box-count" id="boxes_ja_regular">—</span>
       </div>
       <div class="uriage-row uriage-row--4col">
         <span class="uriage-row__label">小袋</span>
-        <input type="number" id="ja_weight_kobukuro"  class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_weight_kobukuro"  class="num-input num-input--weight ja-weight-cell" min="0" step="0.1" value="0">
         <input type="number" id="ja_uriage_kobukuro"  class="num-input num-input--money"  min="0" step="1"   value="0">
         <span class="box-count" id="boxes_ja_kobukuro">—</span>
       </div>
       <div class="uriage-row uriage-row--4col">
         <span class="uriage-row__label">規格外</span>
-        <input type="number" id="ja_weight_kikakugai" class="num-input num-input--weight" min="0" step="0.1" value="0">
+        <input type="number" id="ja_weight_kikakugai" class="num-input num-input--weight ja-weight-cell" min="0" step="0.1" value="0">
         <input type="number" id="ja_uriage_kikakugai" class="num-input num-input--money"  min="0" step="1"   value="0">
         <span class="box-count" id="boxes_ja_kikakugai">—</span>
       </div>

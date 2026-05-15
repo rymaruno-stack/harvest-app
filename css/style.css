@@ -708,3 +708,55 @@ body {
     height: 360px;
   }
 }
+
+/* ===========================
+   全体タブ — JA重量列を非表示
+=========================== */
+.form--global .ja-weight-cell                { display: none; }
+.form--global .uriage-header--4col           { grid-template-columns: 5.5em 1fr 3.5em; }
+.form--global .uriage-row--4col              { grid-template-columns: 5.5em 1fr 3.5em; }
+
+/* 全体タブボタンのアクティブ色 */
+.tab-btn[data-house-id="0"].active {
+  background: var(--uriage-color);
+  border-color: var(--uriage-color);
+}
+
+/* ===========================
+   按分バー
+=========================== */
+.allocation-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #FFF8E1;
+  border: 1px solid #FFD54F;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.allocation-bar__info {
+  font-size: 0.82rem;
+  color: var(--gray-700);
+  flex: 1;
+  line-height: 1.4;
+}
+
+.allocation-bar__btn {
+  min-height: 44px;
+  padding: 0 16px;
+  background: var(--uriage-color);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.allocation-bar__btn:hover  { opacity: 0.85; }
+.allocation-bar__btn:active { opacity: 0.70; }

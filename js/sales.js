@@ -1,7 +1,7 @@
 'use strict';
 
 /* ===========================
-   定数（出荷箱数集計用）
+   定数
 =========================== */
 const JA_COUNT_FIELDS = [
   'ja_nagabako_am', 'ja_fukabako_am', 'ja_hirabako_as', 'ja_hirabako_am', 'ja_10khira_am',
@@ -88,8 +88,14 @@ const JFP_URIAGE_ITEMS = [
   { id: 'jfp_uriage_cd',       label: 'CD10kg' },
 ];
 
+/* ===========================
+   状態
+=========================== */
 let receivingDate  = getTodayStr();
-let currentHouseId = 1;
+let currentHouseId = 0;      // 0 = 全体タブ
+let globalRecord   = null;   // global_sales の現在のレコード
+let allSalesRecs   = [];     // 全ハウスの channel_sales（現在の荷受日）
+let allHarvestData = [];     // 全ハウスの harvests（現在の荷受日付け合致分）
 
 /* ===========================
    ユーティリティ
@@ -170,8 +176,22 @@ function setFormValues(record) {
 }
 
 function getFormValues() {
-  const data = { receiving_date: receivingDate, house_id: currentHouseId };
+  if (currentHouseId === 0) {
+    const data = { receiving_date: receivingDate };
+    JA_ITEMS.forEach(i => {
+      data[`ja_uriage_${i.key}`] = parseFloat(document.getElementById(`ja_uriage_${i.key}`)?.value) || 0;
+    });
+    MARKET_URIAGE_ITEMS.forEach(i => {
+      data[i.id] = parseFloat(document.getElementById(i.id)?.value) || 0;
+    });
+    data.market_container_uriage = parseFloat(document.getElementById('market_container_uriage')?.value) || 0;
+    JFP_URIAGE_ITEMS.forEach(i => {
+      data[i.id] = parseFloat(document.getElementById(i.id)?.value) || 0;
+    });
+    return data;
+  }
 
+  const data = { receiving_date: receivingDate, house_id: currentHouseId };
   let jaTotal = 0;
   JA_ITEMS.forEach(i => {
     const amt = parseFloat(document.getElementById(`ja_uriage_${i.key}`)?.value) || 0;
@@ -214,7 +234,6 @@ function updateTotals() {
   document.getElementById('subtotal-market').textContent           = `¥${marketTotal.toLocaleString()}`;
   document.getElementById('subtotal-market-container').textContent = `¥${containerTotal.toLocaleString()}`;
   document.getElementById('subtotal-jfp').textContent              = `¥${jfpTotal.toLocaleString()}`;
-
   document.getElementById('total-ja').textContent               = `¥${jaTotal.toLocaleString()}`;
   document.getElementById('total-market').textContent           = `¥${marketTotal.toLocaleString()}`;
   document.getElementById('total-market-container').textContent = `¥${containerTotal.toLocaleString()}`;
@@ -235,11 +254,10 @@ function renderShipmentSummary(ja, market, container, jfp) {
 
   const channels = [
     { label: 'JA',          boxes: ja,        color: 'var(--green-mid)' },
-    { label: '市場',         boxes: market,     color: 'var(--market-color)' },
-    { label: '市場コンテナ', boxes: container,  color: 'var(--market-container-color)' },
-    { label: 'JFP',         boxes: jfp,        color: 'var(--jfp-color)' },
+    { label: '市場',         boxes: market,    color: 'var(--market-color)' },
+    { label: '市場コンテナ', boxes: container, color: 'var(--market-container-color)' },
+    { label: 'JFP',         boxes: jfp,       color: 'var(--jfp-color)' },
   ].filter(c => c.boxes > 0);
-
   channels.push({ label: '合計', boxes: total, color: 'var(--green-dark)', bold: true });
 
   cardsEl.innerHTML = channels.map(c => `
@@ -247,6 +265,78 @@ function renderShipmentSummary(ja, market, container, jfp) {
       <div class="total-card__house">${c.label}</div>
       <div class="total-card__count" style="color:${c.color}">${c.boxes.toLocaleString()}<span class="total-card__unit"> 箱</span></div>
     </div>`).join('');
+}
+
+/* ===========================
+   売上按分計算
+=========================== */
+function calcAllocation(gRec, salesRecs, harvestRecs, houseId, dateStr) {
+  const result = {};
+
+  function ratio(houseVal, totalVal) {
+    return totalVal > 0 ? houseVal / totalVal : 0;
+  }
+
+  // JA: 実際のJA重量入力値（channel_sales の ja_weight_* カラム）で按分
+  JA_ITEMS.forEach(i => {
+    const globalAmt = Number(gRec[`ja_uriage_${i.key}`]) || 0;
+    const weightKey = `ja_weight_${i.key}`;
+    const totalWeight = salesRecs.reduce((s, r) => s + (Number(r[weightKey]) || 0), 0);
+    const houseWeight = (salesRecs.find(r => r.house_id === houseId) || {})[weightKey] || 0;
+    result[`ja_uriage_${i.key}`] = Math.round(globalAmt * ratio(houseWeight, totalWeight));
+    result[weightKey] = houseWeight;
+  });
+
+  // 市場: 箱数比率で按分（箱数×5kg だが定数は相殺されるので箱数比で等価）
+  MARKET_URIAGE_ITEMS.forEach(i => {
+    const globalAmt = Number(gRec[i.id]) || 0;
+    const fields = MARKET_BOX_FIELDS[i.id];
+    const totalBoxes = harvestRecs
+      .filter(r => r.market_date === dateStr)
+      .reduce((s, r) => s + fields.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+    const houseBoxes = harvestRecs
+      .filter(r => r.house_id === houseId && r.market_date === dateStr)
+      .reduce((s, r) => s + fields.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+    result[i.id] = Math.round(globalAmt * ratio(houseBoxes, totalBoxes));
+  });
+
+  // 市場コンテナ: コンテナ数×10kg → 箱数比で等価
+  const globalContainer = Number(gRec.market_container_uriage) || 0;
+  const totalContena = harvestRecs
+    .filter(r => r.market_container_date === dateStr)
+    .reduce((s, r) => s + (Number(r.market_contena) || 0), 0);
+  const houseContena = harvestRecs
+    .filter(r => r.house_id === houseId && r.market_container_date === dateStr)
+    .reduce((s, r) => s + (Number(r.market_contena) || 0), 0);
+  result.market_container_uriage = Math.round(globalContainer * ratio(houseContena, totalContena));
+
+  // JFP: 箱数比率で按分（深箱・B = ×5kg、コンテナ・CD = ×10kg も同種内なら比率は変わらない）
+  JFP_URIAGE_ITEMS.forEach(i => {
+    const globalAmt = Number(gRec[i.id]) || 0;
+    const fields = JFP_BOX_FIELDS[i.id];
+    const totalBoxes = harvestRecs
+      .filter(r => r.jfp_date === dateStr)
+      .reduce((s, r) => s + fields.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+    const houseBoxes = harvestRecs
+      .filter(r => r.house_id === houseId && r.jfp_date === dateStr)
+      .reduce((s, r) => s + fields.reduce((ss, f) => ss + (Number(r[f]) || 0), 0), 0);
+    result[i.id] = Math.round(globalAmt * ratio(houseBoxes, totalBoxes));
+  });
+
+  return result;
+}
+
+function updateAllocationBar() {
+  const bar = document.getElementById('allocation-bar');
+  if (!bar) return;
+  bar.classList.toggle('hidden', currentHouseId === 0 || !globalRecord);
+}
+
+function applyAllocation() {
+  if (!globalRecord) { showToast('全体売上データがありません', true); return; }
+  const allocated = calcAllocation(globalRecord, allSalesRecs, allHarvestData, currentHouseId, receivingDate);
+  setFormValues(allocated);
+  showToast('按分を適用しました');
 }
 
 /* ===========================
@@ -258,40 +348,64 @@ async function loadByReceivingDate(dateStr) {
   setBoxCounts([], dateStr);
   if (!db) return;
 
-  const selectCols = [
-    'ja_date', 'market_date', 'market_container_date', 'jfp_date',
+  const harvestCols = [
+    'house_id', 'ja_date', 'market_date', 'market_container_date', 'jfp_date',
     ...ALL_COUNT_FIELDS,
   ].join(', ');
 
-  const [harvestsRes, salesRes] = await Promise.all([
+  const [harvestsRes, globalRes, salesRes] = await Promise.all([
     db.from('harvests')
-      .select(selectCols)
-      .eq('house_id', currentHouseId)
+      .select(harvestCols)
       .or(`ja_date.eq.${dateStr},market_date.eq.${dateStr},market_container_date.eq.${dateStr},jfp_date.eq.${dateStr}`),
-    db.from('channel_sales')
-      .select('*')
-      .eq('receiving_date', dateStr)
-      .eq('house_id', currentHouseId)
-      .single(),
+    db.from('global_sales').select('*').eq('receiving_date', dateStr).single(),
+    db.from('channel_sales').select('*').eq('receiving_date', dateStr),
   ]);
 
-  if (harvestsRes.error) console.error('loadByReceivingDate harvests:', harvestsRes.error);
+  allHarvestData = harvestsRes.data || [];
+  globalRecord   = (globalRes.error && globalRes.error.code !== 'PGRST116') ? null : (globalRes.data || null);
+  allSalesRecs   = salesRes.data || [];
 
-  const harvestData = harvestsRes.data || [];
-  let jaBoxes = 0, marketBoxes = 0, containerBoxes = 0, jfpBoxes = 0;
-  harvestData.forEach(rec => {
-    if (rec.ja_date               === dateStr) jaBoxes        += sumFields(rec, JA_COUNT_FIELDS);
-    if (rec.market_date           === dateStr) marketBoxes    += sumFields(rec, MARKET_COUNT_FIELDS);
-    if (rec.market_container_date === dateStr) containerBoxes += sumFields(rec, MARKET_CONTAINER_FIELDS);
-    if (rec.jfp_date              === dateStr) jfpBoxes       += sumFields(rec, JFP_COUNT_FIELDS);
-  });
-  renderShipmentSummary(jaBoxes, marketBoxes, containerBoxes, jfpBoxes);
-  setBoxCounts(harvestData, dateStr);
+  if (harvestsRes.error) console.error('harvests:', harvestsRes.error);
+  if (salesRes.error)    console.error('channel_sales:', salesRes.error);
 
-  if (salesRes.error && salesRes.error.code !== 'PGRST116') {
-    console.error('loadByReceivingDate channel_sales:', salesRes.error);
+  if (currentHouseId === 0) {
+    // 全体タブ: 全ハウス合計の出荷箱数を表示
+    let jaBoxes = 0, marketBoxes = 0, containerBoxes = 0, jfpBoxes = 0;
+    allHarvestData.forEach(rec => {
+      if (rec.ja_date               === dateStr) jaBoxes        += sumFields(rec, JA_COUNT_FIELDS);
+      if (rec.market_date           === dateStr) marketBoxes    += sumFields(rec, MARKET_COUNT_FIELDS);
+      if (rec.market_container_date === dateStr) containerBoxes += sumFields(rec, MARKET_CONTAINER_FIELDS);
+      if (rec.jfp_date              === dateStr) jfpBoxes       += sumFields(rec, JFP_COUNT_FIELDS);
+    });
+    renderShipmentSummary(jaBoxes, marketBoxes, containerBoxes, jfpBoxes);
+    setBoxCounts(allHarvestData, dateStr);
+    setFormValues(globalRecord);
+  } else {
+    // ハウスタブ: そのハウスの出荷箱数を表示
+    const houseHarvestData = allHarvestData.filter(r => r.house_id === currentHouseId);
+    let jaBoxes = 0, marketBoxes = 0, containerBoxes = 0, jfpBoxes = 0;
+    houseHarvestData.forEach(rec => {
+      if (rec.ja_date               === dateStr) jaBoxes        += sumFields(rec, JA_COUNT_FIELDS);
+      if (rec.market_date           === dateStr) marketBoxes    += sumFields(rec, MARKET_COUNT_FIELDS);
+      if (rec.market_container_date === dateStr) containerBoxes += sumFields(rec, MARKET_CONTAINER_FIELDS);
+      if (rec.jfp_date              === dateStr) jfpBoxes       += sumFields(rec, JFP_COUNT_FIELDS);
+    });
+    renderShipmentSummary(jaBoxes, marketBoxes, containerBoxes, jfpBoxes);
+    setBoxCounts(houseHarvestData, dateStr);
+
+    const thisSalesRec = allSalesRecs.find(r => r.house_id === currentHouseId);
+    if (thisSalesRec) {
+      setFormValues(thisSalesRec);
+    } else if (globalRecord) {
+      // 未保存の場合は全体売上から按分を自動入力
+      const allocated = calcAllocation(globalRecord, allSalesRecs, allHarvestData, currentHouseId, dateStr);
+      setFormValues(allocated);
+    } else {
+      setFormValues(null);
+    }
   }
-  setFormValues(salesRes.data || null);
+
+  updateAllocationBar();
 }
 
 async function saveRecord() {
@@ -301,11 +415,25 @@ async function saveRecord() {
 
   try {
     if (!db) throw new Error('Supabase未接続');
-    const { error } = await db
-      .from('channel_sales')
-      .upsert(getFormValues(), { onConflict: 'receiving_date,house_id' });
-    if (error) throw error;
+    const payload = getFormValues();
+
+    if (currentHouseId === 0) {
+      const { error } = await db
+        .from('global_sales')
+        .upsert(payload, { onConflict: 'receiving_date' });
+      if (error) throw error;
+      globalRecord = payload;
+    } else {
+      const { error } = await db
+        .from('channel_sales')
+        .upsert(payload, { onConflict: 'receiving_date,house_id' });
+      if (error) throw error;
+      const idx = allSalesRecs.findIndex(r => r.house_id === currentHouseId);
+      if (idx >= 0) allSalesRecs[idx] = payload; else allSalesRecs.push(payload);
+    }
+
     showToast('保存しました');
+    updateAllocationBar();
     await loadHistory();
   } catch (err) {
     showToast('保存に失敗しました', true);
@@ -321,12 +449,29 @@ async function loadHistory() {
   if (!db) { container.innerHTML = '<div class="loading">データがありません</div>'; return; }
 
   try {
-    const { data, error } = await db
-      .from('channel_sales')
-      .select('receiving_date, ja_uriage, market_uriage, market_container_uriage, jfp_uriage')
-      .eq('house_id', currentHouseId)
-      .order('receiving_date', { ascending: false })
-      .limit(10);
+    let data, error;
+
+    if (currentHouseId === 0) {
+      const res = await db
+        .from('global_sales')
+        .select('receiving_date, ' + [
+          ...JA_ITEMS.map(i => `ja_uriage_${i.key}`),
+          ...MARKET_URIAGE_ITEMS.map(i => i.id),
+          'market_container_uriage',
+          ...JFP_URIAGE_ITEMS.map(i => i.id),
+        ].join(', '))
+        .order('receiving_date', { ascending: false })
+        .limit(10);
+      data = res.data; error = res.error;
+    } else {
+      const res = await db
+        .from('channel_sales')
+        .select('receiving_date, ja_uriage, market_uriage, market_container_uriage, jfp_uriage')
+        .eq('house_id', currentHouseId)
+        .order('receiving_date', { ascending: false })
+        .limit(10);
+      data = res.data; error = res.error;
+    }
 
     if (error || !data || data.length === 0) {
       container.innerHTML = '<div class="loading">データがありません</div>';
@@ -334,14 +479,24 @@ async function loadHistory() {
     }
 
     container.innerHTML = data.map(rec => {
-      const total = (Number(rec.ja_uriage) || 0) + (Number(rec.market_uriage) || 0) +
-                    (Number(rec.market_container_uriage) || 0) + (Number(rec.jfp_uriage) || 0);
-      const parts = [
-        rec.ja_uriage               > 0 ? `JA:¥${Number(rec.ja_uriage).toLocaleString()}`                             : '',
-        rec.market_uriage           > 0 ? `市場:¥${Number(rec.market_uriage).toLocaleString()}`                        : '',
-        rec.market_container_uriage > 0 ? `市場コンテナ:¥${Number(rec.market_container_uriage).toLocaleString()}` : '',
-        rec.jfp_uriage              > 0 ? `JFP:¥${Number(rec.jfp_uriage).toLocaleString()}`                           : '',
-      ].filter(Boolean);
+      let total, parts;
+      if (currentHouseId === 0) {
+        total =
+          JA_ITEMS.reduce((s, i) => s + (Number(rec[`ja_uriage_${i.key}`]) || 0), 0) +
+          MARKET_URIAGE_ITEMS.reduce((s, i) => s + (Number(rec[i.id]) || 0), 0) +
+          (Number(rec.market_container_uriage) || 0) +
+          JFP_URIAGE_ITEMS.reduce((s, i) => s + (Number(rec[i.id]) || 0), 0);
+        parts = [`全体合計:¥${total.toLocaleString()}`];
+      } else {
+        total = (Number(rec.ja_uriage) || 0) + (Number(rec.market_uriage) || 0) +
+                (Number(rec.market_container_uriage) || 0) + (Number(rec.jfp_uriage) || 0);
+        parts = [
+          rec.ja_uriage               > 0 ? `JA:¥${Number(rec.ja_uriage).toLocaleString()}`                             : '',
+          rec.market_uriage           > 0 ? `市場:¥${Number(rec.market_uriage).toLocaleString()}`                        : '',
+          rec.market_container_uriage > 0 ? `市場コンテナ:¥${Number(rec.market_container_uriage).toLocaleString()}` : '',
+          rec.jfp_uriage              > 0 ? `JFP:¥${Number(rec.jfp_uriage).toLocaleString()}`                           : '',
+        ].filter(Boolean);
+      }
 
       return `
         <div class="history-card" data-date="${rec.receiving_date}">
@@ -373,6 +528,7 @@ function initTabs() {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentHouseId = parseInt(btn.dataset.houseId, 10);
+      document.getElementById('sales-form').classList.toggle('form--global', currentHouseId === 0);
       loadByReceivingDate(receivingDate);
       loadHistory();
     });
@@ -406,9 +562,16 @@ function initForm() {
   });
 }
 
+function initAllocationBtn() {
+  const btn = document.getElementById('reapply-btn');
+  if (btn) btn.addEventListener('click', applyAllocation);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('sales-form').classList.add('form--global');
   initTabs();
   initDateInput();
   initForm();
+  initAllocationBtn();
   await Promise.all([loadByReceivingDate(receivingDate), loadHistory()]);
 });
