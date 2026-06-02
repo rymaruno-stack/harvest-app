@@ -67,14 +67,16 @@ function setFormValues(record) {
   });
   DATE_FIELDS.forEach(f => {
     const el = document.getElementById(f);
-    if (el) el.value = record ? (record[f] ?? '') : '';
+    if (el) el.value = record ? (record[f] ?? getTodayStr()) : getTodayStr();
   });
   const noteEl = document.getElementById('note');
   if (noteEl) noteEl.value = record ? (record.note ?? '') : '';
 }
 
 function getFormValues() {
-  const data = { house_id: currentHouseId, date: currentDate };
+  const jaDateEl = document.getElementById('ja_date');
+  const date = (jaDateEl?.value) || currentDate;
+  const data = { house_id: currentHouseId, date };
   COUNT_FIELDS.forEach(f => {
     const el = document.getElementById(f);
     data[f] = el ? (parseInt(el.value, 10) || 0) : 0;
