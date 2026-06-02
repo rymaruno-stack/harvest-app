@@ -236,6 +236,38 @@ async function loadHistory() {
 }
 
 /* ===========================
+   気温表示
+=========================== */
+async function updateWeatherDisplay(dateStr) {
+  const el     = document.getElementById('weather-display');
+  const descEl = document.getElementById('weather-desc');
+  const tempEl = document.getElementById('weather-temp');
+  if (!el) return;
+
+  if (!dateStr) { el.classList.add('hidden'); return; }
+
+  const rec = await fetchWeatherData(dateStr);
+  if (!rec || (rec.temp_max == null && rec.temp_min == null)) {
+    el.classList.add('hidden');
+    return;
+  }
+
+  if (descEl) descEl.textContent = rec.weather_desc ? rec.weather_desc.split(/\s+/)[0] : '';
+  const parts = [];
+  if (rec.temp_max != null) parts.push(`最高 ${rec.temp_max}℃`);
+  if (rec.temp_min != null) parts.push(`最低 ${rec.temp_min}℃`);
+  if (tempEl) tempEl.textContent = parts.join(' / ');
+  el.classList.remove('hidden');
+}
+
+function initWeatherDisplay() {
+  const input = document.getElementById('ja_date');
+  if (input) {
+    input.addEventListener('change', e => updateWeatherDisplay(e.target.value));
+  }
+}
+
+/* ===========================
    初期化
 =========================== */
 function initTabs() {
@@ -271,6 +303,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   initDetailToggles();
   initForm();
+  initWeatherDisplay();
   await loadRecord();
+  updateWeatherDisplay(document.getElementById('ja_date')?.value);
   await Promise.all([loadTodayTotals(), loadHistory()]);
 });
